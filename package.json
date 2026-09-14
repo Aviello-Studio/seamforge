@@ -1,0 +1,56 @@
+{
+  "name": "seamforge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A private desktop tool for creating seamless audio loops.",
+  "author": "SeamForge",
+  "type": "module",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "concurrently -k \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "build": "vite build && tsc -p tsconfig.electron.json",
+    "test": "vitest run",
+    "check": "tsc --noEmit && npm run test && npm run build",
+    "dist": "npm run build && electron-builder --win nsis",
+    "dist:portable": "npm run build && powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-portable.ps1"
+  },
+  "dependencies": {
+    "lucide-react": "1.46.0",
+    "meyda": "^5.6.3",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "wavesurfer.js": "7.12.12"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "concurrently": "latest",
+    "electron": "44.3.0",
+    "electron-builder": "26.15.3",
+    "typescript": "7.0.2",
+    "vite": "8.3.0",
+    "vitest": "5.0.0",
+    "wait-on": "latest"
+  },
+  "build": {
+    "appId": "studio.seamforge.app",
+    "productName": "SeamForge",
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}
