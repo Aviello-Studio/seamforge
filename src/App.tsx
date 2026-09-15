@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Download, FileAudio, Pause, Play, RotateCcw, Sparkles, Upload, WandSparkles } from 'lucide-react'
+import { Cpu, Download, FileAudio, Gauge, Pause, Play, RotateCcw, Settings, Sparkles, Upload, WandSparkles, X } from 'lucide-react'
 import WaveSurfer from 'wavesurfer.js'
 import RegionsPlugin, { type Region } from 'wavesurfer.js/dist/plugins/regions.esm.js'
 import { AudioTrimmer } from './AudioTrimmer'
@@ -8,6 +8,7 @@ import { findMusicalLoops, type MusicalLoopCandidate } from './musicAnalysis'
 
 type Status = 'empty' | 'decoding' | 'trimming' | 'ready' | 'analyzing' | 'rendering'
 type PendingAudio = { buffer: AudioBuffer; fileName: string; url: string }
+type ProcessingDevice = 'cpu' | 'cuda'
 
 const formatTime = (seconds: number) => {
   const minutes = Math.floor(seconds / 60)
@@ -43,6 +44,10 @@ function App() {
   const [playhead, setPlayhead] = useState(0)
   const [aiEnabled, setAiEnabled] = useState(false)
   const [aiRuntimeLabel, setAiRuntimeLabel] = useState('Установится при первом анализе')
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [processingDevice, setProcessingDevice] = useState<ProcessingDevice>('cpu')
+  const [settingsDraft, setSettingsDraft] = useState<ProcessingDevice>('cpu')
+  const [gpuInfo, setGpuInfo] = useState<{ available: boolean; name: string | null }>({ available: false, name: null })
 
   const duration = buffer?.duration ?? 0
   const loopDuration = Math.max(0, end - start - crossfade / 1000)
@@ -72,8 +77,23 @@ function App() {
   useEffect(() => {
     if (!window.seamforge) return
     void window.seamforge.aiStatus().then((state) => setAiRuntimeLabel(state.label))
+    void window.seamforge.getSettings().then((settings) => {
+      setProcessingDevice(settings.processingDevice)
+      setSettingsDraft(settings.processingDevice)
+      setGpuInfo(settings.gpu)
+    })
     return window.seamforge.onAiProgress((progress) => setMessage(progress))
   }, [])
+
+  const saveProcessingSettings = async () => {
+    if (!window.seamforge) return
+    const settings = await window.seamforge.saveSettings({ processingDevice: settingsDraft })
+    setProcessingDevice(settings.processingDevice)
+    const runtime = await window.seamforge.aiStatus()
+    setAiRuntimeLabel(runtime.label)
+    setSettingsOpen(false)
+    setMessage(`Обработка: ${settings.processingDevice === 'cuda' ? `GPU · ${gpuInfo.name ?? 'NVIDIA CUDA'}` : 'CPU'}. Применится при следующем ИИ‑анализе.`)
+  }
 
   const syncRegion = useCallback((nextStart: number, nextEnd: number) => {
     if (!regionRef.current) return
@@ -343,7 +363,7 @@ function App() {
     <main onDragOver={(event) => event.preventDefault()} onDrop={onDrop}>
       <header className="topbar">
         <div className="brand"><span className="brand-mark"><RotateCcw size={16} /></span> SeamForge</div>
-        <div className="local-badge"><span /> Обработка на устройстве</div>
+        <div className="topbar-actions"><div className="local-badge"><span /> Обработка на устройстве</div><button className="settings-button" aria-label="Настройки" onClick={() => { setSettingsDraft(processingDevice); setSettingsOpen(true) }}><Settings size={17} /></button></div>
       </header>
 
       <section className="hero">
@@ -403,6 +423,25 @@ function App() {
       </section>
 
       {pendingAudio && <AudioTrimmer buffer={pendingAudio.buffer} fileName={pendingAudio.fileName} url={pendingAudio.url} onCancel={cancelTrim} onConfirm={confirmTrim} />}
+
+      {settingsOpen && <div className="settings-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setSettingsOpen(false) }}>
+        <section className="settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+          <header><div><p>SEAMFORGE</p><h2 id="settings-title">Настройки обработки</h2></div><button className="icon-button" aria-label="Закрыть настройки" onClick={() => setSettingsOpen(false)}><X size={18} /></button></header>
+          <div className="settings-body">
+            <div className="settings-heading"><strong>Устройство для ИИ</strong><small>Выбор влияет только на отделение вокала. Fast Pro работает одинаково.</small></div>
+            <label className={`device-card ${settingsDraft === 'cpu' ? 'selected' : ''}`}>
+              <input type="radio" name="processing-device" value="cpu" checked={settingsDraft === 'cpu'} onChange={() => setSettingsDraft('cpu')} />
+              <span><Cpu size={20} /></span><div><strong>Процессор · CPU</strong><small>Надёжный режим, медленнее, не использует видеопамять</small></div><em>Всегда доступен</em>
+            </label>
+            <label className={`device-card ${settingsDraft === 'cuda' ? 'selected' : ''} ${!gpuInfo.available ? 'disabled' : ''}`}>
+              <input type="radio" name="processing-device" value="cuda" checked={settingsDraft === 'cuda'} disabled={!gpuInfo.available} onChange={() => setSettingsDraft('cuda')} />
+              <span><Gauge size={20} /></span><div><strong>Видеокарта · NVIDIA CUDA</strong><small>{gpuInfo.name ?? 'Совместимая NVIDIA GPU не найдена'}</small></div><em>{gpuInfo.available ? 'Значительно быстрее' : 'Недоступно'}</em>
+            </label>
+            {settingsDraft === 'cuda' && <p className="gpu-note">При первом GPU‑анализе SeamForge один раз загрузит CUDA‑сборку PyTorch. Потребуется дополнительное место на диске.</p>}
+          </div>
+          <footer><button onClick={() => setSettingsOpen(false)}>Отмена</button><button className="settings-save" onClick={() => void saveProcessingSettings()}>Сохранить настройки</button></footer>
+        </section>
+      </div>}
 
       <footer><span>{buffer ? `Готовая петля: ${formatTime(loopDuration)}` : message}</span><span>Никаких загрузок в облако</span></footer>
     </main>

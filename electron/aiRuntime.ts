@@ -2,11 +2,13 @@ import { spawn } from 'node:child_process'
 import { access, copyFile, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
+import type { ProcessingDevice } from './settings.js'
 
 const PACKAGES = ['audio-separator[cpu]==0.47.0', 'audioread>=3.0']
 const MODEL = 'model_bs_roformer_ep_317_sdr_12.9755.ckpt'
 const UV_URL = 'https://github.com/astral-sh/uv/releases/latest/download/uv-x86_64-pc-windows-msvc.zip'
 const FFMPEG_URL = 'https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-lgpl.zip'
+const TORCH_CUDA_INDEX = 'https://download.pytorch.org/whl/cu130'
 
 export type AiRuntimeState = {
   ready: boolean
@@ -45,17 +47,36 @@ export function aiPaths(userData: string) {
     python: join(root, 'runtime', 'Scripts', 'python.exe'),
     separator: join(root, 'runtime', 'Scripts', 'audio-separator.exe'),
     readyMarker: join(root, 'runtime', '.seamforge-ready'),
+    deviceMarker: join(root, 'runtime', '.seamforge-device'),
     models: join(root, 'models'),
   }
 }
 
-export async function getAiRuntimeState(userData: string): Promise<AiRuntimeState> {
+export async function getAiRuntimeState(userData: string, device: ProcessingDevice): Promise<AiRuntimeState> {
   const paths = aiPaths(userData)
   const ready = await exists(paths.separator) && await exists(paths.readyMarker) && await exists(paths.ffmpeg)
+  const configuredDevice = await readFile(paths.deviceMarker, 'utf8').then((value) => value.trim(), () => 'cpu')
   return {
-    ready,
-    label: ready ? 'ИИ‑движок готов' : 'Установится при первом анализе',
+    ready: ready && configuredDevice === device,
+    label: !ready
+      ? 'Установится при первом анализе'
+      : configuredDevice === device
+        ? `ИИ‑движок готов · ${device === 'cuda' ? 'GPU' : 'CPU'}`
+        : `${device === 'cuda' ? 'GPU' : 'CPU'} настроится при анализе`,
   }
+}
+
+export async function detectNvidiaGpu(): Promise<{ available: boolean; name: string | null }> {
+  return new Promise((resolve) => {
+    const child = spawn('nvidia-smi', ['--query-gpu=name', '--format=csv,noheader'], { windowsHide: true, shell: false })
+    let output = ''
+    child.stdout.on('data', (chunk: Buffer) => { output += chunk.toString() })
+    child.on('error', () => resolve({ available: false, name: null }))
+    child.on('close', (code) => {
+      const name = output.split(/\r?\n/).map((line) => line.trim()).find(Boolean) ?? null
+      resolve({ available: code === 0 && Boolean(name), name })
+    })
+  })
 }
 
 async function ensureUv(root: string, uv: string, onProgress: Progress) {
@@ -97,9 +118,43 @@ async function ensureFfmpeg(root: string, ffmpeg: string, onProgress: Progress) 
   }
 }
 
-export async function ensureAiRuntime(userData: string, onProgress: Progress) {
+async function configureDevice(paths: ReturnType<typeof aiPaths>, device: ProcessingDevice, onProgress: Progress) {
+  const current = await readFile(paths.deviceMarker, 'utf8').then((value) => value.trim(), () => 'cpu')
+  if (current === device) return
+  if (device === 'cuda') {
+    const gpu = await detectNvidiaGpu()
+    if (!gpu.available) throw new Error('NVIDIA GPU не обнаружен. Выберите CPU в настройках.')
+    onProgress(`ИИ: настраиваю CUDA для ${gpu.name}…`)
+    await run(paths.uv, [
+      'pip', 'install', '--python', paths.python,
+      '--reinstall-package', 'torch',
+      'torch==2.14.0', '--index', TORCH_CUDA_INDEX,
+    ], (line) => {
+      if (/download|installed/i.test(line)) onProgress(`ИИ GPU: ${line}`)
+    })
+    await run(paths.python, ['-c', "import torch; assert torch.cuda.is_available(); print(torch.cuda.get_device_name(0))"])
+  } else {
+    onProgress('ИИ: переключаю движок на CPU…')
+    await run(paths.uv, [
+      'pip', 'install', '--python', paths.python,
+      '--reinstall-package', 'torch',
+      'torch==2.14.0',
+    ], (line) => {
+      if (/download|installed/i.test(line)) onProgress(`ИИ CPU: ${line}`)
+    })
+  }
+  await writeFile(paths.deviceMarker, `${device}\n`)
+}
+
+export async function ensureAiRuntime(userData: string, onProgress: Progress, device: ProcessingDevice = 'cpu') {
   const paths = aiPaths(userData)
-  if (await exists(paths.separator) && await exists(paths.readyMarker) && await exists(paths.ffmpeg)) return paths
+  const configuredDevice = await readFile(paths.deviceMarker, 'utf8').then((value) => value.trim(), () => 'cpu')
+  if (
+    await exists(paths.separator) &&
+    await exists(paths.readyMarker) &&
+    await exists(paths.ffmpeg) &&
+    configuredDevice === device
+  ) return paths
   await mkdir(paths.root, { recursive: true })
   await ensureUv(paths.root, paths.uv, onProgress)
   if (!(await exists(paths.separator)) || !(await exists(paths.readyMarker))) {
@@ -114,8 +169,10 @@ export async function ensureAiRuntime(userData: string, onProgress: Progress) {
     if (!(await exists(paths.separator))) throw new Error('ИИ‑движок установился не полностью')
     await run(paths.python, ['-c', 'import audio_separator, audioread'])
     await writeFile(paths.readyMarker, 'audio-separator=0.47.0\npython=3.12\n')
+    await writeFile(paths.deviceMarker, 'cpu\n')
   }
   await ensureFfmpeg(paths.root, paths.ffmpeg, onProgress)
+  await configureDevice(paths, device, onProgress)
   return paths
 }
 
@@ -123,8 +180,9 @@ export async function separateVocals(
   userData: string,
   wavBytes: Uint8Array,
   onProgress: Progress,
+  device: ProcessingDevice = 'cpu',
 ): Promise<Uint8Array> {
-  const paths = await ensureAiRuntime(userData, onProgress)
+  const paths = await ensureAiRuntime(userData, onProgress, device)
   await mkdir(paths.models, { recursive: true })
   const work = await mkdtemp(join(tmpdir(), 'seamforge-ai-'))
   const input = join(work, 'source.wav')

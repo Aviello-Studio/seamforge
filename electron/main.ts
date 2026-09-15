@@ -3,6 +3,8 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { writeFile } from 'node:fs/promises'
 import { getAiRuntimeState, separateVocals } from './aiRuntime.js'
+import { loadSettings, saveSettings } from './settings.js'
+import { detectNvidiaGpu } from './aiRuntime.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
 
@@ -38,12 +40,24 @@ ipcMain.handle('save-wav', async (_event, bytes: Uint8Array, defaultName: string
   return result.filePath
 })
 
-ipcMain.handle('ai-status', () => getAiRuntimeState(app.getPath('userData')))
+ipcMain.handle('settings-get', async () => {
+  const settings = await loadSettings(app.getPath('userData'))
+  const gpu = await detectNvidiaGpu()
+  return { ...settings, gpu }
+})
+
+ipcMain.handle('settings-save', (_event, value: unknown) => saveSettings(app.getPath('userData'), value))
+
+ipcMain.handle('ai-status', async () => {
+  const settings = await loadSettings(app.getPath('userData'))
+  return getAiRuntimeState(app.getPath('userData'), settings.processingDevice)
+})
 
 ipcMain.handle('ai-separate-vocals', async (event, bytes: Uint8Array) => {
   const progress = (message: string) => event.sender.send('ai-progress', message)
   try {
-    const vocals = await separateVocals(app.getPath('userData'), bytes, progress)
+    const settings = await loadSettings(app.getPath('userData'))
+    const vocals = await separateVocals(app.getPath('userData'), bytes, progress, settings.processingDevice)
     return { ok: true as const, vocals }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Неизвестная ошибка ИИ‑движка'
