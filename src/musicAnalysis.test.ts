@@ -63,6 +63,16 @@ describe('musical loop analysis', () => {
     expect(cutsWord).toBeLessThan(0.5)
   })
 
+  it('normalizes vocal safety to the track instead of a fixed loudness', () => {
+    const sampleRate = 1000
+    const quietVocal = new Float32Array(5000)
+    for (let index = 1000; index < 4000; index += 1) quietVocal[index] = Math.sin(index * 0.15) * 0.025
+    const quietBoundary = vocalBoundarySafety(quietVocal, sampleRate, 500, 4500)
+    const activeBoundary = vocalBoundarySafety(quietVocal, sampleRate, 1800, 3200)
+    expect(quietBoundary).toBeGreaterThan(0.9)
+    expect(activeBoundary).toBeLessThan(0.5)
+  })
+
   it('returns a bounded candidate for repeated musical material', async () => {
     const sampleRate = 8000
     const duration = 8

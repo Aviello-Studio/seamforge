@@ -41,6 +41,12 @@ export interface RefinedSeam {
   phaseScore: number
 }
 
+interface VocalActivityProfile {
+  envelope: Float32Array
+  hopSize: number
+  referenceRms: number
+}
+
 type ProgressCallback = (progress: number, stage: string) => void
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
@@ -285,17 +291,74 @@ function windowRms(data: Float32Array, center: number, radius: number): number {
   return Math.sqrt(energy / Math.max(1, count))
 }
 
+function scoreVocalLevels(startRms: number, endRms: number, referenceRms: number): number {
+  const loudest = Math.max(startRms, endRms)
+  const relativeLevel = loudest / Math.max(0.004, referenceRms)
+  const quiet = Math.exp(-relativeLevel / 0.34)
+  const balance = Math.exp(-Math.abs(startRms - endRms) / (loudest + referenceRms * 0.08 + 1e-6))
+  return clamp(Math.max(quiet, balance * 0.3), 0, 1)
+}
+
+function createVocalActivityProfile(data: Float32Array, sampleRate: number): VocalActivityProfile {
+  const hopSize = Math.max(1, Math.round(sampleRate * 0.01))
+  const radius = Math.max(16, Math.round(sampleRate * 0.14))
+  const envelope = new Float32Array(Math.max(1, Math.ceil(data.length / hopSize)))
+  for (let index = 0; index < envelope.length; index += 1) {
+    envelope[index] = windowRms(data, clamp(index * hopSize, radius, data.length - radius), radius)
+  }
+  const sorted = Array.from(envelope).sort((a, b) => a - b)
+  const referenceRms = Math.max(0.004, sorted[Math.floor((sorted.length - 1) * 0.82)] ?? 0.004)
+  return { envelope, hopSize, referenceRms }
+}
+
+function profileVocalSafety(profile: VocalActivityProfile, start: number, end: number): number {
+  const at = (sample: number) => profile.envelope[clamp(Math.round(sample / profile.hopSize), 0, profile.envelope.length - 1)]
+  return scoreVocalLevels(at(start), at(end), profile.referenceRms)
+}
+
 /** Scores whether both boundaries avoid an active separated vocal phrase. */
 export function vocalBoundarySafety(data: Float32Array, sampleRate: number, start: number, end: number): number {
   const radius = Math.max(16, Math.round(sampleRate * 0.14))
   const startRms = windowRms(data, clamp(Math.round(start), radius, data.length - radius), radius)
   const endRms = windowRms(data, clamp(Math.round(end), radius, data.length - radius), radius)
-  const loudest = Math.max(startRms, endRms)
-  const quiet = Math.exp(-loudest / 0.028)
-  const balance = Math.exp(-Math.abs(startRms - endRms) / (loudest + 0.008))
-  // Matching two active fragments is still riskier than joining two vocal rests.
-  const activeFallback = balance * 0.42
-  return clamp(Math.max(quiet, activeFallback), 0, 1)
+  const reference = createVocalActivityProfile(data, sampleRate).referenceRms
+  return scoreVocalLevels(startRms, endRms, reference)
+}
+
+function refineVocalAwareSeam(
+  channels: Float32Array[],
+  sampleRate: number,
+  start: number,
+  end: number,
+  vocalProfile: VocalActivityProfile,
+  vocalScale: number,
+): RefinedSeam & { vocalSafety: number } {
+  const phaseRefined = refineStereoSeam(channels, sampleRate, start, end)
+  const radius = Math.max(1, Math.round(sampleRate * 0.24))
+  const step = Math.max(1, Math.round(sampleRate * 0.008))
+  let bestStart = phaseRefined.start
+  let bestEnd = phaseRefined.end
+  let bestPhase = phaseRefined.phaseScore
+  let bestVocal = profileVocalSafety(vocalProfile, bestStart * vocalScale, bestEnd * vocalScale)
+  let bestRank = bestPhase * 0.34 + bestVocal * 0.66
+
+  for (let offset = -radius; offset <= radius; offset += step) {
+    const candidateStart = Math.round(start + offset)
+    const candidateEnd = Math.round(end + offset)
+    if (candidateStart < 1 || candidateEnd > channels[0].length) continue
+    const phase = stereoSeamQuality(channels, candidateStart, candidateEnd, sampleRate)
+    const vocal = profileVocalSafety(vocalProfile, candidateStart * vocalScale, candidateEnd * vocalScale)
+    const movementPenalty = Math.abs(offset) / radius * 0.025
+    const rank = phase * 0.34 + vocal * 0.66 - movementPenalty
+    if (rank > bestRank) {
+      bestRank = rank
+      bestStart = candidateStart
+      bestEnd = candidateEnd
+      bestPhase = phase
+      bestVocal = vocal
+    }
+  }
+  return { start: bestStart, end: bestEnd, phaseScore: bestPhase, vocalSafety: bestVocal }
 }
 
 export function refineStereoSeam(channels: Float32Array[], sampleRate: number, start: number, end: number): RefinedSeam {
@@ -418,7 +481,7 @@ export async function findMusicalLoops(
       if (beatDistance < minimumBeats) continue
       const harmonic = Math.max(0, cosine(beatFeatures[startIndex].chroma, beatFeatures[endIndex].chroma))
       const loudnessDifference = Math.abs(beatFeatures[startIndex].rmsDb - beatFeatures[endIndex].rmsDb)
-      if (harmonic < (options.exhaustive ? 0.45 : 0.58) || loudnessDifference > (options.exhaustive ? 14 : 10)) continue
+      if (harmonic < 0.58 || loudnessDifference > 10) continue
       const path = recurrencePathScore(recurrence, startIndex, endIndex, pathSpan)
       const sameBarPhase = beatDistance % meter.beatsPerBar === 0
       const onDownbeat = startIndex % meter.beatsPerBar === meter.downbeatOffset && endIndex % meter.beatsPerBar === meter.downbeatOffset
@@ -440,21 +503,27 @@ export async function findMusicalLoops(
   const minimumSeparation = buffer.sampleRate * 0.35
   const vocalMono = options.vocalBuffer ? mixToMono(options.vocalBuffer) : null
   const vocalScale = options.vocalBuffer ? options.vocalBuffer.length / buffer.length : 1
-  const candidateLimit = options.exhaustive ? 1000 : 120
+  const vocalProfile = vocalMono && options.vocalBuffer
+    ? createVocalActivityProfile(vocalMono, options.vocalBuffer.sampleRate)
+    : null
+  const candidateLimit = options.exhaustive ? 600 : 120
   for (const candidate of prioritizedCandidates.slice(0, candidateLimit)) {
     const rawStart = beats[candidate.startIndex] * hopSize
     const rawEnd = beats[candidate.endIndex] * hopSize
     // Keep the exact beat-to-beat duration. Snapping both ends independently to
     // zero crossings can remove or repeat syllable fragments on every loop.
-    const refined = refineStereoSeam(channels, buffer.sampleRate, rawStart, rawEnd)
+    const refined = vocalProfile
+      ? refineVocalAwareSeam(channels, buffer.sampleRate, rawStart, rawEnd, vocalProfile, vocalScale)
+      : refineStereoSeam(channels, buffer.sampleRate, rawStart, rawEnd)
     const localFlux = (beatFeatures[candidate.startIndex].flux + beatFeatures[candidate.endIndex].flux) * 0.5
-    const crossfadeMs = refined.phaseScore > 0.9 ? 8 : refined.phaseScore > 0.78 || localFlux > 0.01 ? 15 : 25
-    const vocal = vocalMono
-      ? vocalBoundarySafety(vocalMono, options.vocalBuffer!.sampleRate, refined.start * vocalScale, refined.end * vocalScale)
+    const baseCrossfadeMs = refined.phaseScore > 0.9 ? 8 : refined.phaseScore > 0.78 || localFlux > 0.01 ? 15 : 25
+    const vocal = vocalProfile
+      ? (refined as RefinedSeam & { vocalSafety: number }).vocalSafety
       : undefined
+    const crossfadeMs = vocal === undefined ? baseCrossfadeMs : Math.max(baseCrossfadeMs, Math.round(45 + (1 - vocal) * 180))
     const combined = vocal === undefined
       ? candidate.score * 0.72 + refined.phaseScore * 0.28
-      : candidate.score * 0.48 + refined.phaseScore * 0.17 + vocal * 0.35
+      : (candidate.score * 0.68 + refined.phaseScore * 0.32) * (0.55 + vocal * 0.45)
     evaluated.push({
       start: refined.start / buffer.sampleRate,
       end: refined.end / buffer.sampleRate,
