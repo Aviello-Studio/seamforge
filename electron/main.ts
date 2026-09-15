@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { writeFile } from 'node:fs/promises'
+import { getAiRuntimeState, separateVocals } from './aiRuntime.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
 
@@ -35,6 +36,19 @@ ipcMain.handle('save-wav', async (_event, bytes: Uint8Array, defaultName: string
   if (result.canceled || !result.filePath) return null
   await writeFile(result.filePath, Buffer.from(bytes))
   return result.filePath
+})
+
+ipcMain.handle('ai-status', () => getAiRuntimeState(app.getPath('userData')))
+
+ipcMain.handle('ai-separate-vocals', async (event, bytes: Uint8Array) => {
+  const progress = (message: string) => event.sender.send('ai-progress', message)
+  try {
+    const vocals = await separateVocals(app.getPath('userData'), bytes, progress)
+    return { ok: true as const, vocals }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Неизвестная ошибка ИИ‑движка'
+    return { ok: false as const, error: message }
+  }
 })
 
 app.whenReady().then(() => {

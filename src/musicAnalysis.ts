@@ -13,7 +13,13 @@ export interface MusicalLoopCandidate {
     recurrence: number
     rhythm: number
     phase: number
+    vocal?: number
   }
+}
+
+export interface LoopAnalysisOptions {
+  vocalBuffer?: AudioBuffer
+  exhaustive?: boolean
 }
 
 interface FeatureFrame {
@@ -266,6 +272,32 @@ export function stereoSeamQuality(channels: Float32Array[], start: number, end: 
   return clamp(average * 0.7 + Math.min(...scores) * 0.3, 0, 1)
 }
 
+function windowRms(data: Float32Array, center: number, radius: number): number {
+  const from = clamp(center - radius, 0, data.length)
+  const to = clamp(center + radius, from + 1, data.length)
+  const stride = Math.max(1, Math.floor((to - from) / 500))
+  let energy = 0
+  let count = 0
+  for (let index = from; index < to; index += stride) {
+    energy += data[index] * data[index]
+    count += 1
+  }
+  return Math.sqrt(energy / Math.max(1, count))
+}
+
+/** Scores whether both boundaries avoid an active separated vocal phrase. */
+export function vocalBoundarySafety(data: Float32Array, sampleRate: number, start: number, end: number): number {
+  const radius = Math.max(16, Math.round(sampleRate * 0.14))
+  const startRms = windowRms(data, clamp(Math.round(start), radius, data.length - radius), radius)
+  const endRms = windowRms(data, clamp(Math.round(end), radius, data.length - radius), radius)
+  const loudest = Math.max(startRms, endRms)
+  const quiet = Math.exp(-loudest / 0.028)
+  const balance = Math.exp(-Math.abs(startRms - endRms) / (loudest + 0.008))
+  // Matching two active fragments is still riskier than joining two vocal rests.
+  const activeFallback = balance * 0.42
+  return clamp(Math.max(quiet, activeFallback), 0, 1)
+}
+
 export function refineStereoSeam(channels: Float32Array[], sampleRate: number, start: number, end: number): RefinedSeam {
   const length = channels[0].length
   const radius = Math.max(2, Math.round(sampleRate * 0.02))
@@ -325,7 +357,11 @@ function fallbackCandidate(buffer: AudioBuffer): MusicalLoopCandidate {
   }
 }
 
-export async function findMusicalLoops(buffer: AudioBuffer, onProgress?: ProgressCallback): Promise<MusicalLoopCandidate[]> {
+export async function findMusicalLoops(
+  buffer: AudioBuffer,
+  onProgress?: ProgressCallback,
+  options: LoopAnalysisOptions = {},
+): Promise<MusicalLoopCandidate[]> {
   const mono = mixToMono(buffer)
   const channels = Array.from({ length: buffer.numberOfChannels }, (_, channel) => buffer.getChannelData(channel))
   const frameSize = buffer.sampleRate >= 32_000 ? 4096 : 2048
@@ -382,7 +418,7 @@ export async function findMusicalLoops(buffer: AudioBuffer, onProgress?: Progres
       if (beatDistance < minimumBeats) continue
       const harmonic = Math.max(0, cosine(beatFeatures[startIndex].chroma, beatFeatures[endIndex].chroma))
       const loudnessDifference = Math.abs(beatFeatures[startIndex].rmsDb - beatFeatures[endIndex].rmsDb)
-      if (harmonic < 0.58 || loudnessDifference > 10) continue
+      if (harmonic < (options.exhaustive ? 0.45 : 0.58) || loudnessDifference > (options.exhaustive ? 14 : 10)) continue
       const path = recurrencePathScore(recurrence, startIndex, endIndex, pathSpan)
       const sameBarPhase = beatDistance % meter.beatsPerBar === 0
       const onDownbeat = startIndex % meter.beatsPerBar === meter.downbeatOffset && endIndex % meter.beatsPerBar === meter.downbeatOffset
@@ -400,38 +436,54 @@ export async function findMusicalLoops(buffer: AudioBuffer, onProgress?: Progres
   if (!rawCandidates.length) return [fallbackCandidate(buffer)]
   rawCandidates.sort((a, b) => b.score - a.score)
   const prioritizedCandidates = prioritizeLoopDurations(rawCandidates, beats.length)
-  const selected: MusicalLoopCandidate[] = []
+  const evaluated: MusicalLoopCandidate[] = []
   const minimumSeparation = buffer.sampleRate * 0.35
-  for (const candidate of prioritizedCandidates.slice(0, 120)) {
+  const vocalMono = options.vocalBuffer ? mixToMono(options.vocalBuffer) : null
+  const vocalScale = options.vocalBuffer ? options.vocalBuffer.length / buffer.length : 1
+  const candidateLimit = options.exhaustive ? 1000 : 120
+  for (const candidate of prioritizedCandidates.slice(0, candidateLimit)) {
     const rawStart = beats[candidate.startIndex] * hopSize
     const rawEnd = beats[candidate.endIndex] * hopSize
     // Keep the exact beat-to-beat duration. Snapping both ends independently to
     // zero crossings can remove or repeat syllable fragments on every loop.
     const refined = refineStereoSeam(channels, buffer.sampleRate, rawStart, rawEnd)
-    if (selected.some((existing) =>
-      Math.abs(existing.start * buffer.sampleRate - refined.start) < minimumSeparation &&
-      Math.abs(existing.end * buffer.sampleRate - refined.end) < minimumSeparation,
-    )) continue
     const localFlux = (beatFeatures[candidate.startIndex].flux + beatFeatures[candidate.endIndex].flux) * 0.5
     const crossfadeMs = refined.phaseScore > 0.9 ? 8 : refined.phaseScore > 0.78 || localFlux > 0.01 ? 15 : 25
-    const combined = candidate.score * 0.72 + refined.phaseScore * 0.28
-    selected.push({
+    const vocal = vocalMono
+      ? vocalBoundarySafety(vocalMono, options.vocalBuffer!.sampleRate, refined.start * vocalScale, refined.end * vocalScale)
+      : undefined
+    const combined = vocal === undefined
+      ? candidate.score * 0.72 + refined.phaseScore * 0.28
+      : candidate.score * 0.48 + refined.phaseScore * 0.17 + vocal * 0.35
+    evaluated.push({
       start: refined.start / buffer.sampleRate,
       end: refined.end / buffer.sampleRate,
       score: 1 - combined,
-      confidence: Math.round(clamp(18 + combined * 80, 1, 97)),
+      confidence: Math.round(clamp(12 + combined * 86, 1, 98)),
       crossfadeMs,
-      label: `Fast Pro ${selected.length + 1}`,
+      label: vocal === undefined ? 'Fast Pro' : 'AI Studio',
       diagnostics: {
         musical: candidate.score,
         recurrence: candidate.recurrence,
         rhythm: candidate.rhythm,
         phase: refined.phaseScore,
+        vocal,
       },
     })
-    onProgress?.(0.84 + selected.length * 0.03, 'Подгоняю фазу стереоканалов')
+    if (evaluated.length % 32 === 0) {
+      onProgress?.(0.84 + evaluated.length / candidateLimit * 0.15, vocalMono ? 'ИИ отбрасывает стыки внутри вокала' : 'Подгоняю фазу стереоканалов')
+      await new Promise((resolve) => globalThis.setTimeout(resolve, 0))
+    }
+  }
+  evaluated.sort((a, b) => a.score - b.score)
+  const selected: MusicalLoopCandidate[] = []
+  for (const candidate of evaluated) {
+    if (selected.some((existing) =>
+      Math.abs(existing.start - candidate.start) * buffer.sampleRate < minimumSeparation &&
+      Math.abs(existing.end - candidate.end) * buffer.sampleRate < minimumSeparation,
+    )) continue
+    selected.push({ ...candidate, label: `${candidate.label} ${selected.length + 1}` })
     if (selected.length === 5) break
-    await new Promise((resolve) => globalThis.setTimeout(resolve, 0))
   }
   onProgress?.(1, 'Готово')
   return selected.length ? selected : [fallbackCandidate(buffer)]

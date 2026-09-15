@@ -6,6 +6,7 @@ import {
   recurrencePathScore,
   refineStereoSeam,
   stereoSeamQuality,
+  vocalBoundarySafety,
 } from './musicAnalysis'
 
 describe('musical loop analysis', () => {
@@ -50,6 +51,16 @@ describe('musical loop analysis', () => {
     ]
     const prioritized = prioritizeLoopDurations(candidates, 100)
     expect(prioritized.slice(0, 4)).toContain(candidates[2])
+  })
+
+  it('strongly prefers boundaries in vocal rests', () => {
+    const sampleRate = 1000
+    const vocal = new Float32Array(5000)
+    for (let index = 1800; index < 2400; index += 1) vocal[index] = Math.sin(index * 0.2) * 0.4
+    const quiet = vocalBoundarySafety(vocal, sampleRate, 800, 4200)
+    const cutsWord = vocalBoundarySafety(vocal, sampleRate, 1950, 2250)
+    expect(quiet).toBeGreaterThan(0.95)
+    expect(cutsWord).toBeLessThan(0.5)
   })
 
   it('returns a bounded candidate for repeated musical material', async () => {

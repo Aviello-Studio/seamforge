@@ -41,6 +41,8 @@ function App() {
   const [loopCandidates, setLoopCandidates] = useState<MusicalLoopCandidate[]>([])
   const [selectedCandidate, setSelectedCandidate] = useState<number | null>(null)
   const [playhead, setPlayhead] = useState(0)
+  const [aiEnabled, setAiEnabled] = useState(false)
+  const [aiRuntimeLabel, setAiRuntimeLabel] = useState('Установится при первом анализе')
 
   const duration = buffer?.duration ?? 0
   const loopDuration = Math.max(0, end - start - crossfade / 1000)
@@ -66,6 +68,12 @@ function App() {
     if (pendingUrlRef.current) URL.revokeObjectURL(pendingUrlRef.current)
     void audioContextRef.current?.close()
   }, [stopPreview])
+
+  useEffect(() => {
+    if (!window.seamforge) return
+    void window.seamforge.aiStatus().then((state) => setAiRuntimeLabel(state.label))
+    return window.seamforge.onAiProgress((progress) => setMessage(progress))
+  }, [])
 
   const syncRegion = useCallback((nextStart: number, nextEnd: number) => {
     if (!regionRef.current) return
@@ -178,12 +186,25 @@ function App() {
     setMessage('Готовлю музыкальный анализ…')
     await new Promise((resolve) => window.setTimeout(resolve, 30))
     try {
+      let vocalBuffer: AudioBuffer | undefined
+      if (aiEnabled) {
+        if (!window.seamforge) throw new Error('ИИ‑режим доступен в настольной версии SeamForge')
+        const wav = encodeWav(audioBufferAsLoop(buffer))
+        const separation = await window.seamforge.separateVocals(wav)
+        if (!separation.ok) throw new Error(separation.error)
+        const context = audioContextRef.current ?? new AudioContext()
+        audioContextRef.current = context
+        const bytes = separation.vocals
+        const copy = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
+        vocalBuffer = await context.decodeAudioData(copy)
+        setAiRuntimeLabel('ИИ‑движок готов')
+      }
       const results = await findMusicalLoops(buffer, (progress, stage) =>
         setMessage(`${stage} · ${Math.round(progress * 100)}%`),
-      )
+      { vocalBuffer, exhaustive: aiEnabled })
       setLoopCandidates(results)
       applyCandidate(results[0], 0)
-      setMessage(`Найдено вариантов: ${results.length}. Прослушайте стык и выберите лучший.`)
+      setMessage(`${aiEnabled ? 'ИИ‑анализ' : 'Fast Pro'} нашёл вариантов: ${results.length}. Прослушайте стык и выберите лучший.`)
     } catch (error) {
       setMessage(error instanceof Error ? `Ошибка музыкального анализа: ${error.message}` : 'Музыкальный анализ не удался')
     } finally {
@@ -354,9 +375,23 @@ function App() {
               <label><span><b>Конец</b><output>{formatTime(end)}</output></span><input type="range" min="0.1" max={duration} step="0.001" value={end} onChange={(event) => updateEnd(Number(event.target.value))} /></label>
               <label><span><b>Crossfade</b><output>{crossfade} мс</output></span><input type="range" min="5" max={Math.min(1000, Math.max(20, loopDuration * 450))} step="5" value={crossfade} onChange={(event) => { setCrossfade(Number(event.target.value)); stopPreview() }} /></label>
             </div>
-            {loopCandidates.length > 0 && <div className="candidate-strip"><div><strong>Fast Pro варианты</strong><small>Такт · recurrence · стереофаза; процент — индекс уверенности</small></div><div className="candidate-list">{loopCandidates.map((candidate, index) => <button key={`${candidate.start}-${candidate.end}`} title={candidate.diagnostics ? `Музыка ${Math.round(candidate.diagnostics.musical * 100)} · фраза ${Math.round(candidate.diagnostics.recurrence * 100)} · ритм ${Math.round(candidate.diagnostics.rhythm * 100)} · фаза ${Math.round(candidate.diagnostics.phase * 100)}` : candidate.label} className={selectedCandidate === index ? 'selected' : ''} onClick={() => applyCandidate(candidate, index)}><b>#{index + 1}</b><span>{formatTime(candidate.start)} → {formatTime(candidate.end)}</span><em>{candidate.confidence}%</em></button>)}</div></div>}
+            <div className={`ai-mode ${aiEnabled ? 'enabled' : ''}`}>
+              <label className="ai-switch">
+                <input type="checkbox" checked={aiEnabled} disabled={status === 'analyzing'} onChange={(event) => {
+                  setAiEnabled(event.target.checked)
+                  setLoopCandidates([])
+                  setSelectedCandidate(null)
+                  setQuality(null)
+                  setMessage(event.target.checked ? 'ИИ‑режим включён — глубокий анализ запустится по кнопке' : 'ИИ‑режим выключен — используется быстрый локальный анализ')
+                }} />
+                <span aria-hidden="true" />
+                <div><strong>Включить ИИ‑режим</strong><small>BS‑RoFormer отделит вокал и поможет не разрезать слова</small></div>
+              </label>
+              <em>{aiEnabled ? aiRuntimeLabel : 'Fast Pro без модели'}</em>
+            </div>
+            {loopCandidates.length > 0 && <div className="candidate-strip"><div><strong>{loopCandidates[0]?.label.startsWith('AI') ? 'AI Studio варианты' : 'Fast Pro варианты'}</strong><small>{loopCandidates[0]?.diagnostics?.vocal === undefined ? 'Такт · recurrence · стереофаза' : 'Вокал · такт · фраза · стереофаза'}; процент — индекс уверенности</small></div><div className="candidate-list">{loopCandidates.map((candidate, index) => <button key={`${candidate.start}-${candidate.end}`} title={candidate.diagnostics ? `Музыка ${Math.round(candidate.diagnostics.musical * 100)} · фраза ${Math.round(candidate.diagnostics.recurrence * 100)} · ритм ${Math.round(candidate.diagnostics.rhythm * 100)} · фаза ${Math.round(candidate.diagnostics.phase * 100)}${candidate.diagnostics.vocal === undefined ? '' : ` · безопасность вокала ${Math.round(candidate.diagnostics.vocal * 100)}`}` : candidate.label} className={selectedCandidate === index ? 'selected' : ''} onClick={() => applyCandidate(candidate, index)}><b>#{index + 1}</b><span>{formatTime(candidate.start)} → {formatTime(candidate.end)}</span><em>{candidate.confidence}%</em></button>)}</div></div>}
             <div className="action-row">
-              <button className="magic-button" onClick={() => void autoFind()} disabled={status !== 'ready'}><WandSparkles size={18} /> {status === 'analyzing' ? 'Анализирую музыку…' : 'Найти музыкальный стык'}</button>
+              <button className="magic-button" onClick={() => void autoFind()} disabled={status !== 'ready'}><WandSparkles size={18} /> {status === 'analyzing' ? (aiEnabled ? 'ИИ анализирует…' : 'Анализирую музыку…') : (aiEnabled ? 'Найти идеальный стык с ИИ' : 'Найти музыкальный стык')}</button>
               <button className={`play-button ${isPlaying ? 'playing' : ''}`} onClick={() => void togglePreview()} disabled={!rendered}>{isPlaying ? <Pause size={19} fill="currentColor" /> : <Play size={19} fill="currentColor" />} {isPlaying ? 'Остановить' : 'Проверить стык'}</button>
               <div className="spacer" />
               {quality !== null && <div className="score"><span style={{ width: `${Math.max(8, 100 - quality * 45)}%` }} /> Сходство стыка</div>}
