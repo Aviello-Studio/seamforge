@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   findMusicalLoops,
   nearestQuietRisingCrossing,
+  prioritizeLoopDurations,
   recurrencePathScore,
   refineStereoSeam,
   stereoSeamQuality,
@@ -24,7 +25,7 @@ describe('musical loop analysis', () => {
     expect(recurrencePathScore(matrix, 4, 9, 2)).toBeGreaterThan(recurrencePathScore(matrix, 2, 8, 2))
   })
 
-  it('improves the worst-channel seam with sub-frame phase refinement', () => {
+  it('preserves phrase duration without degrading the worst-channel seam', () => {
     const sampleRate = 4000
     const length = sampleRate * 2
     const left = Float32Array.from({ length }, (_, index) => Math.sin(index / sampleRate * Math.PI * 2 * 137))
@@ -34,9 +35,21 @@ describe('musical loop analysis', () => {
     const end = 5193
     const before = stereoSeamQuality(channels, start, end, sampleRate)
     const refined = refineStereoSeam(channels, sampleRate, start, end)
-    expect(refined.phaseScore).toBeGreaterThan(before)
+    expect(refined.phaseScore).toBeGreaterThanOrEqual(before)
+    expect(refined.end - refined.start).toBe(end - start)
     expect(Math.abs(refined.start - start)).toBeLessThanOrEqual(sampleRate * 0.02 + 1)
     expect(Math.abs(refined.end - end)).toBeLessThanOrEqual(sampleRate * 0.02 + 1)
+  })
+
+  it('keeps a long loop in the first candidates even when short matches score first', () => {
+    const candidates = [
+      { startIndex: 10, endIndex: 45 },
+      { startIndex: 20, endIndex: 58 },
+      { startIndex: 2, endIndex: 91 },
+      { startIndex: 15, endIndex: 70 },
+    ]
+    const prioritized = prioritizeLoopDurations(candidates, 100)
+    expect(prioritized.slice(0, 4)).toContain(candidates[2])
   })
 
   it('returns a bounded candidate for repeated musical material', async () => {

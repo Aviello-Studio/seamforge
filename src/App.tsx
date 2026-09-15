@@ -21,6 +21,9 @@ function App() {
   const regionRef = useRef<Region | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const sourceRef = useRef<AudioBufferSourceNode | null>(null)
+  const animationFrameRef = useRef<number | null>(null)
+  const isPlayingRef = useRef(false)
+  const seekPreviewRef = useRef<(time: number) => void>(() => undefined)
   const objectUrlRef = useRef<string | null>(null)
   const pendingUrlRef = useRef<string | null>(null)
 
@@ -37,16 +40,22 @@ function App() {
   const [pendingAudio, setPendingAudio] = useState<PendingAudio | null>(null)
   const [loopCandidates, setLoopCandidates] = useState<MusicalLoopCandidate[]>([])
   const [selectedCandidate, setSelectedCandidate] = useState<number | null>(null)
+  const [playhead, setPlayhead] = useState(0)
 
   const duration = buffer?.duration ?? 0
   const loopDuration = Math.max(0, end - start - crossfade / 1000)
 
   const stopPreview = useCallback(() => {
+    if (animationFrameRef.current !== null) {
+      cancelAnimationFrame(animationFrameRef.current)
+      animationFrameRef.current = null
+    }
     if (sourceRef.current) {
       try { sourceRef.current.stop() } catch { /* already stopped */ }
       sourceRef.current.disconnect()
       sourceRef.current = null
     }
+    isPlayingRef.current = false
     setIsPlaying(false)
   }, [])
 
@@ -91,6 +100,7 @@ function App() {
         resize: false,
       })
     })
+    wave.on('interaction', (time) => seekPreviewRef.current(time))
     waveRef.current = wave
   }, [])
 
@@ -149,6 +159,7 @@ function App() {
     setQuality(null)
     setLoopCandidates([])
     setSelectedCandidate(null)
+    setPlayhead(0)
     setPendingAudio(null)
     setStatus('ready')
     setMessage(`${trimmed.numberOfChannels === 1 ? 'Моно' : 'Стерео'} · ${Math.round(trimmed.sampleRate / 1000)} кГц · обрезано до ${formatTime(trimmed.duration)}`)
@@ -188,6 +199,9 @@ function App() {
     setQuality(candidate.score)
     setSelectedCandidate(index)
     syncRegion(candidate.start, candidate.end)
+    const auditionPoint = Math.max(candidate.start, candidate.end - Math.min(3, (candidate.end - candidate.start) * 0.35))
+    setPlayhead(auditionPoint)
+    waveRef.current?.setTime(auditionPoint)
   }
 
   const rendered = useMemo<RenderedLoop | null>(() => {
@@ -195,27 +209,69 @@ function App() {
     return renderSeamlessLoop(buffer, start, end, crossfade)
   }, [buffer, start, end, crossfade])
 
+  const renderedRef = useRef<RenderedLoop | null>(null)
+  const loopBoundsRef = useRef({ start: 0, end: 0 })
+  renderedRef.current = rendered
+  loopBoundsRef.current = { start, end }
+
+  const startPreviewAt = useCallback(async (requestedOffset: number) => {
+    const currentLoop = renderedRef.current
+    if (!currentLoop) return
+    stopPreview()
+    const context = audioContextRef.current ?? new AudioContext()
+    audioContextRef.current = context
+    if (context.state === 'suspended') await context.resume()
+    const offset = ((requestedOffset % currentLoop.duration) + currentLoop.duration) % currentLoop.duration
+    const source = context.createBufferSource()
+    source.buffer = toAudioBuffer(context, currentLoop)
+    source.loop = true
+    source.connect(context.destination)
+    source.start(0, offset)
+    sourceRef.current = source
+    isPlayingRef.current = true
+    setIsPlaying(true)
+    const startedAt = context.currentTime
+    const tick = () => {
+      if (sourceRef.current !== source) return
+      const bounds = loopBoundsRef.current
+      const elapsed = (offset + context.currentTime - startedAt) % currentLoop.duration
+      const visibleTime = bounds.start + elapsed / currentLoop.duration * Math.max(0, bounds.end - bounds.start)
+      setPlayhead(visibleTime)
+      waveRef.current?.setTime(visibleTime)
+      animationFrameRef.current = requestAnimationFrame(tick)
+    }
+    tick()
+  }, [stopPreview])
+
+  const seekPreview = useCallback((requestedTime: number) => {
+    const currentLoop = renderedRef.current
+    if (!currentLoop) return
+    const bounds = loopBoundsRef.current
+    const time = Math.min(bounds.end, Math.max(bounds.start, requestedTime))
+    const ratio = (time - bounds.start) / Math.max(0.001, bounds.end - bounds.start)
+    const offset = Math.min(currentLoop.duration - 0.001, Math.max(0, ratio * currentLoop.duration))
+    const wasPlaying = isPlayingRef.current
+    setPlayhead(time)
+    waveRef.current?.setTime(time)
+    if (wasPlaying) void startPreviewAt(offset)
+  }, [startPreviewAt])
+
+  useEffect(() => {
+    seekPreviewRef.current = seekPreview
+  }, [seekPreview])
+
   const togglePreview = async () => {
     if (isPlaying) {
       stopPreview()
       return
     }
     if (!rendered) return
-    const context = audioContextRef.current ?? new AudioContext()
-    audioContextRef.current = context
-    if (context.state === 'suspended') await context.resume()
-    const source = context.createBufferSource()
-    source.buffer = toAudioBuffer(context, rendered)
-    source.loop = true
-    source.connect(context.destination)
-    source.onended = () => {
-      if (sourceRef.current === source) sourceRef.current = null
-      setIsPlaying(false)
-    }
-    source.start(0, Math.max(0, rendered.duration - Math.min(3, rendered.duration * 0.35)))
-    sourceRef.current = source
-    setIsPlaying(true)
-    setMessage('Стык прозвучит через несколько секунд — играет обработанный результат')
+    const previewTime = playhead >= start && playhead < end
+      ? playhead
+      : Math.max(start, end - Math.min(3, (end - start) * 0.35))
+    const offset = (previewTime - start) / Math.max(0.001, end - start) * rendered.duration
+    await startPreviewAt(offset)
+    setMessage('Играет обработанный loop — перематывайте курсором на волне или ползунком')
   }
 
   const exportLoop = async () => {
@@ -248,6 +304,7 @@ function App() {
     setQuality(null)
     setSelectedCandidate(null)
     syncRegion(next, end)
+    setPlayhead((current) => Math.max(next, Math.min(end, current)))
     stopPreview()
   }
 
@@ -257,6 +314,7 @@ function App() {
     setQuality(null)
     setSelectedCandidate(null)
     syncRegion(start, next)
+    setPlayhead((current) => Math.max(start, Math.min(next, current)))
     stopPreview()
   }
 
@@ -290,6 +348,7 @@ function App() {
               <button className="text-button" onClick={() => fileInputRef.current?.click()}>Заменить</button>
             </div>
             <div className="wave-shell"><div ref={waveformRef} className="waveform" /><div className="wave-label start-label" style={{ left: `${(start / duration) * 100}%` }}>{formatTime(start)}</div><div className="wave-label end-label" style={{ left: `${(end / duration) * 100}%` }}>{formatTime(end)}</div></div>
+            <label className="preview-scrubber"><span>{isPlaying ? 'Воспроизводится' : 'Позиция'} · {formatTime(playhead)}</span><input aria-label="Позиция воспроизведения" type="range" min={start} max={Math.max(start + 0.001, end)} step="0.001" value={Math.max(start, Math.min(end, playhead))} onChange={(event) => seekPreview(Number(event.target.value))} /><output>{formatTime(end)}</output></label>
             <div className="controls-grid">
               <label><span><b>Начало</b><output>{formatTime(start)}</output></span><input type="range" min="0" max={Math.max(0, duration - 0.1)} step="0.001" value={start} onChange={(event) => updateStart(Number(event.target.value))} /></label>
               <label><span><b>Конец</b><output>{formatTime(end)}</output></span><input type="range" min="0.1" max={duration} step="0.001" value={end} onChange={(event) => updateEnd(Number(event.target.value))} /></label>

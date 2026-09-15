@@ -277,7 +277,7 @@ export function refineStereoSeam(channels: Float32Array[], sampleRate: number, s
   const evaluate = (candidateStart: number, candidateEnd: number) => {
     if (candidateStart < 1 || candidateEnd > length || candidateEnd - candidateStart < sampleRate * 0.2) return
     const phase = stereoSeamQuality(channels, candidateStart, candidateEnd, sampleRate)
-    const movement = (Math.abs(candidateStart - start) + Math.abs(candidateEnd - end)) / Math.max(1, radius * 2)
+    const movement = Math.abs(candidateStart - start) / Math.max(1, radius)
     const rank = phase - movement * 0.025
     if (rank > bestRank) {
       bestRank = rank
@@ -286,15 +286,31 @@ export function refineStereoSeam(channels: Float32Array[], sampleRate: number, s
     }
   }
 
-  for (let startOffset = -radius; startOffset <= radius; startOffset += coarseStep) {
-    for (let endOffset = -radius; endOffset <= radius; endOffset += coarseStep) evaluate(Math.round(start + startOffset), Math.round(end + endOffset))
-  }
+  // Shift both boundaries together so the musical duration stays exact. Independent
+  // movement can drop or repeat up to 40 ms of a vocal phrase on every wrap.
+  for (let offset = -radius; offset <= radius; offset += coarseStep) evaluate(Math.round(start + offset), Math.round(end + offset))
   const coarseStart = bestStart
   const coarseEnd = bestEnd
-  for (let startOffset = -coarseStep; startOffset <= coarseStep; startOffset += 1) {
-    for (let endOffset = -coarseStep; endOffset <= coarseStep; endOffset += 1) evaluate(coarseStart + startOffset, coarseEnd + endOffset)
-  }
+  for (let offset = -coarseStep; offset <= coarseStep; offset += 1) evaluate(coarseStart + offset, coarseEnd + offset)
   return { start: bestStart, end: bestEnd, phaseScore: stereoSeamQuality(channels, bestStart, bestEnd, sampleRate) }
+}
+
+export function prioritizeLoopDurations<T extends { startIndex: number; endIndex: number }>(candidates: T[], totalBeats: number): T[] {
+  if (!candidates.length) return []
+  const ratio = (candidate: T) => (candidate.endIndex - candidate.startIndex) / Math.max(1, totalBeats - 1)
+  const anchors = [
+    candidates[0],
+    candidates.find((candidate) => ratio(candidate) >= 0.72),
+    candidates.find((candidate) => ratio(candidate) >= 0.5 && ratio(candidate) < 0.72),
+    candidates.find((candidate) => ratio(candidate) >= 0.3 && ratio(candidate) < 0.5),
+  ].filter((candidate): candidate is T => Boolean(candidate))
+  const seen = new Set<string>()
+  return [...anchors, ...candidates].filter((candidate) => {
+    const key = `${candidate.startIndex}:${candidate.endIndex}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
 }
 
 function fallbackCandidate(buffer: AudioBuffer): MusicalLoopCandidate {
@@ -383,14 +399,15 @@ export async function findMusicalLoops(buffer: AudioBuffer, onProgress?: Progres
 
   if (!rawCandidates.length) return [fallbackCandidate(buffer)]
   rawCandidates.sort((a, b) => b.score - a.score)
+  const prioritizedCandidates = prioritizeLoopDurations(rawCandidates, beats.length)
   const selected: MusicalLoopCandidate[] = []
   const minimumSeparation = buffer.sampleRate * 0.35
-  for (const candidate of rawCandidates.slice(0, 80)) {
+  for (const candidate of prioritizedCandidates.slice(0, 120)) {
     const rawStart = beats[candidate.startIndex] * hopSize
     const rawEnd = beats[candidate.endIndex] * hopSize
-    const crossingStart = nearestQuietRisingCrossing(mono, buffer.sampleRate, rawStart)
-    const crossingEnd = nearestQuietRisingCrossing(mono, buffer.sampleRate, rawEnd)
-    const refined = refineStereoSeam(channels, buffer.sampleRate, crossingStart, crossingEnd)
+    // Keep the exact beat-to-beat duration. Snapping both ends independently to
+    // zero crossings can remove or repeat syllable fragments on every loop.
+    const refined = refineStereoSeam(channels, buffer.sampleRate, rawStart, rawEnd)
     if (selected.some((existing) =>
       Math.abs(existing.start * buffer.sampleRate - refined.start) < minimumSeparation &&
       Math.abs(existing.end * buffer.sampleRate - refined.end) < minimumSeparation,
