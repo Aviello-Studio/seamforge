@@ -271,7 +271,7 @@ function App() {
         <div>
           <p className="eyebrow"><Sparkles size={14} /> SEAMLESS LOOP STUDIO</p>
           <h1>Заставьте звук<br /><em>замкнуться идеально.</em></h1>
-          <p className="subtitle">Находим похожие фрагменты сигнала, совмещаем zero crossing и сглаживаем стык корреляционно-безопасным crossfade без скачка громкости.</p>
+          <p className="subtitle">Fast Pro сопоставляет повторяющиеся музыкальные фразы, границы тактов и фазу каждого канала, а затем сглаживает стык без скачка громкости.</p>
         </div>
         <div className="hero-orbit" aria-hidden="true"><div /><div /><span>∞</span></div>
       </section>
@@ -295,7 +295,7 @@ function App() {
               <label><span><b>Конец</b><output>{formatTime(end)}</output></span><input type="range" min="0.1" max={duration} step="0.001" value={end} onChange={(event) => updateEnd(Number(event.target.value))} /></label>
               <label><span><b>Crossfade</b><output>{crossfade} мс</output></span><input type="range" min="5" max={Math.min(1000, Math.max(20, loopDuration * 450))} step="5" value={crossfade} onChange={(event) => { setCrossfade(Number(event.target.value)); stopPreview() }} /></label>
             </div>
-            {loopCandidates.length > 0 && <div className="candidate-strip"><div><strong>Музыкальные варианты</strong><small>От beat/chroma-анализа, лучший не всегда первый</small></div><div className="candidate-list">{loopCandidates.map((candidate, index) => <button key={`${candidate.start}-${candidate.end}`} className={selectedCandidate === index ? 'selected' : ''} onClick={() => applyCandidate(candidate, index)}><b>#{index + 1}</b><span>{formatTime(candidate.start)} → {formatTime(candidate.end)}</span><em>{candidate.confidence}%</em></button>)}</div></div>}
+            {loopCandidates.length > 0 && <div className="candidate-strip"><div><strong>Fast Pro варианты</strong><small>Такт · recurrence · стереофаза; процент — индекс уверенности</small></div><div className="candidate-list">{loopCandidates.map((candidate, index) => <button key={`${candidate.start}-${candidate.end}`} title={candidate.diagnostics ? `Музыка ${Math.round(candidate.diagnostics.musical * 100)} · фраза ${Math.round(candidate.diagnostics.recurrence * 100)} · ритм ${Math.round(candidate.diagnostics.rhythm * 100)} · фаза ${Math.round(candidate.diagnostics.phase * 100)}` : candidate.label} className={selectedCandidate === index ? 'selected' : ''} onClick={() => applyCandidate(candidate, index)}><b>#{index + 1}</b><span>{formatTime(candidate.start)} → {formatTime(candidate.end)}</span><em>{candidate.confidence}%</em></button>)}</div></div>}
             <div className="action-row">
               <button className="magic-button" onClick={() => void autoFind()} disabled={status !== 'ready'}><WandSparkles size={18} /> {status === 'analyzing' ? 'Анализирую музыку…' : 'Найти музыкальный стык'}</button>
               <button className={`play-button ${isPlaying ? 'playing' : ''}`} onClick={() => void togglePreview()} disabled={!rendered}>{isPlaying ? <Pause size={19} fill="currentColor" /> : <Play size={19} fill="currentColor" />} {isPlaying ? 'Остановить' : 'Проверить стык'}</button>

@@ -8,6 +8,12 @@ export interface MusicalLoopCandidate {
   confidence: number
   crossfadeMs: number
   label: string
+  diagnostics?: {
+    musical: number
+    recurrence: number
+    rhythm: number
+    phase: number
+  }
 }
 
 interface FeatureFrame {
@@ -15,6 +21,18 @@ interface FeatureFrame {
   rmsDb: number
   centroid: number
   flux: number
+}
+
+interface MeterGrid {
+  beatsPerBar: 3 | 4
+  downbeatOffset: number
+  confidence: number
+}
+
+export interface RefinedSeam {
+  start: number
+  end: number
+  phaseScore: number
 }
 
 type ProgressCallback = (progress: number, stage: string) => void
@@ -31,6 +49,16 @@ function cosine(a: number[], b: number[]): number {
     bb += b[i] * b[i]
   }
   return dot / (Math.sqrt(aa * bb) + 1e-9)
+}
+
+function featureSimilarity(a: FeatureFrame, b: FeatureFrame): number {
+  const chroma = Math.max(0, cosine(a.chroma, b.chroma))
+  const loudness = Math.exp(-Math.abs(a.rmsDb - b.rmsDb) / 7)
+  const centroidScale = Math.max(250, a.centroid, b.centroid)
+  const timbre = Math.exp(-Math.abs(a.centroid - b.centroid) / centroidScale)
+  const fluxScale = Math.max(0.002, a.flux, b.flux)
+  const transient = Math.exp(-Math.abs(a.flux - b.flux) / fluxScale)
+  return chroma * 0.57 + loudness * 0.17 + timbre * 0.14 + transient * 0.12
 }
 
 function detectTempo(features: FeatureFrame[], sampleRate: number, hopSize: number): number {
@@ -97,22 +125,88 @@ function detectBeatFrames(features: FeatureFrame[], period: number): number[] {
   return [...new Set(beats)].sort((a, b) => a - b)
 }
 
-function sequenceSimilarity(features: FeatureFrame[], a: number, b: number, span: number, direction: 1 | -1): number {
-  let total = 0
-  let weightTotal = 0
-  for (let step = 0; step < span; step += 1) {
-    const ai = a + step * direction
-    const bi = b + step * direction
-    if (ai < 0 || bi < 0 || ai >= features.length || bi >= features.length) break
-    const weight = Math.pow(0.985, step)
-    const chromaScore = Math.max(0, cosine(features[ai].chroma, features[bi].chroma))
-    const loudnessScore = Math.exp(-Math.abs(features[ai].rmsDb - features[bi].rmsDb) / 7)
-    const centroidScale = Math.max(250, features[ai].centroid, features[bi].centroid)
-    const timbreScore = Math.exp(-Math.abs(features[ai].centroid - features[bi].centroid) / centroidScale)
-    total += (chromaScore * 0.68 + loudnessScore * 0.2 + timbreScore * 0.12) * weight
-    weightTotal += weight
+function beatSyncFeatures(features: FeatureFrame[], beats: number[], period: number): FeatureFrame[] {
+  const radius = Math.max(1, Math.round(period * 0.42))
+  return beats.map((beat) => {
+    const chroma = new Array(12).fill(0) as number[]
+    let rmsLinear = 0
+    let centroid = 0
+    let flux = 0
+    let weightTotal = 0
+    for (let frame = Math.max(0, beat - radius); frame <= Math.min(features.length - 1, beat + radius); frame += 1) {
+      const weight = 1 - Math.abs(frame - beat) / (radius + 1) * 0.45
+      for (let band = 0; band < 12; band += 1) chroma[band] += features[frame].chroma[band] * weight
+      rmsLinear += Math.pow(10, features[frame].rmsDb / 20) * weight
+      centroid += features[frame].centroid * weight
+      flux = Math.max(flux, features[frame].flux)
+      weightTotal += weight
+    }
+    return {
+      chroma: chroma.map((value) => value / Math.max(1e-9, weightTotal)),
+      rmsDb: 20 * Math.log10(rmsLinear / Math.max(1e-9, weightTotal) + 1e-7),
+      centroid: centroid / Math.max(1e-9, weightTotal),
+      flux,
+    }
+  })
+}
+
+function detectMeter(beats: FeatureFrame[]): MeterGrid {
+  let best: MeterGrid = { beatsPerBar: 4, downbeatOffset: 0, confidence: 0 }
+  const meanFlux = beats.reduce((sum, beat) => sum + beat.flux, 0) / Math.max(1, beats.length)
+  for (const meter of [3, 4] as const) {
+    for (let offset = 0; offset < meter; offset += 1) {
+      let accented = 0
+      let other = 0
+      let accentedCount = 0
+      let otherCount = 0
+      beats.forEach((beat, index) => {
+        if (index % meter === offset) {
+          accented += beat.flux
+          accentedCount += 1
+        } else {
+          other += beat.flux
+          otherCount += 1
+        }
+      })
+      const contrast = ((accented / Math.max(1, accentedCount)) - (other / Math.max(1, otherCount))) / (meanFlux + 1e-6)
+      const confidence = clamp(0.5 + contrast * 0.35 + (meter === 4 ? 0.015 : 0), 0, 1)
+      if (confidence > best.confidence) best = { beatsPerBar: meter, downbeatOffset: offset, confidence }
+    }
   }
-  return weightTotal ? total / weightTotal : 0
+  return best
+}
+
+function buildRecurrenceMatrix(features: FeatureFrame[]): Float32Array[] {
+  const matrix = Array.from({ length: features.length }, () => new Float32Array(features.length))
+  for (let row = 0; row < features.length; row += 1) {
+    matrix[row][row] = 1
+    for (let column = row + 1; column < features.length; column += 1) {
+      const score = featureSimilarity(features[row], features[column])
+      matrix[row][column] = score
+      matrix[column][row] = score
+    }
+  }
+  return matrix
+}
+
+export function recurrencePathScore(matrix: ArrayLike<ArrayLike<number>>, a: number, b: number, span: number): number {
+  let weighted = 0
+  let weightTotal = 0
+  let continuity = 0
+  let count = 0
+  for (let step = -span; step <= span; step += 1) {
+    const ai = a + step
+    const bi = b + step
+    if (ai < 0 || bi < 0 || ai >= matrix.length || bi >= matrix.length) continue
+    const weight = Math.pow(0.92, Math.abs(step))
+    const value = matrix[ai][bi] ?? 0
+    weighted += value * weight
+    weightTotal += weight
+    if (value >= 0.72) continuity += 1
+    count += 1
+  }
+  if (!weightTotal) return 0
+  return clamp(weighted / weightTotal * 0.82 + continuity / Math.max(1, count) * 0.18, 0, 1)
 }
 
 export function nearestQuietRisingCrossing(data: Float32Array, sampleRate: number, target: number): number {
@@ -137,6 +231,72 @@ export function nearestQuietRisingCrossing(data: Float32Array, sampleRate: numbe
   return best
 }
 
+function channelSeamScore(channel: Float32Array, start: number, end: number, window: number): number {
+  const stride = Math.max(1, Math.floor(window / 160))
+  let dot = 0
+  let energyA = 0
+  let energyB = 0
+  let count = 0
+  for (let offset = 0; offset < window; offset += stride) {
+    const a = channel[end - window + offset]
+    const b = channel[start + offset]
+    dot += a * b
+    energyA += a * a
+    energyB += b * b
+    count += 1
+  }
+  const correlation = clamp(dot / (Math.sqrt(energyA * energyB) + 1e-9), -1, 1)
+  const rmsA = Math.sqrt(energyA / Math.max(1, count))
+  const rmsB = Math.sqrt(energyB / Math.max(1, count))
+  const scale = Math.max(0.015, rmsA, rmsB)
+  const loudness = Math.exp(-Math.abs(rmsA - rmsB) / (scale + 0.01))
+  const boundary = Math.exp(-Math.abs(channel[end - 1] - channel[start]) / scale)
+  const slopeA = channel[end - 1] - channel[end - 2]
+  const slopeB = channel[start + 1] - channel[start]
+  const slope = Math.exp(-Math.abs(slopeA - slopeB) / scale)
+  return clamp((correlation + 1) * 0.36 + loudness * 0.14 + boundary * 0.09 + slope * 0.05, 0, 1)
+}
+
+export function stereoSeamQuality(channels: Float32Array[], start: number, end: number, sampleRate: number): number {
+  const safeStart = clamp(Math.round(start), 1, channels[0].length - 3)
+  const safeEnd = clamp(Math.round(end), safeStart + 3, channels[0].length)
+  const window = Math.max(16, Math.min(Math.round(sampleRate * 0.025), safeEnd - 1, safeEnd - safeStart - 1, channels[0].length - safeStart))
+  const scores = channels.map((channel) => channelSeamScore(channel, safeStart, safeEnd, window))
+  const average = scores.reduce((sum, value) => sum + value, 0) / Math.max(1, scores.length)
+  return clamp(average * 0.7 + Math.min(...scores) * 0.3, 0, 1)
+}
+
+export function refineStereoSeam(channels: Float32Array[], sampleRate: number, start: number, end: number): RefinedSeam {
+  const length = channels[0].length
+  const radius = Math.max(2, Math.round(sampleRate * 0.02))
+  const coarseStep = Math.max(1, Math.round(sampleRate * 0.001))
+  let bestStart = clamp(Math.round(start), 1, length - 3)
+  let bestEnd = clamp(Math.round(end), bestStart + 3, length)
+  let bestRank = stereoSeamQuality(channels, bestStart, bestEnd, sampleRate)
+
+  const evaluate = (candidateStart: number, candidateEnd: number) => {
+    if (candidateStart < 1 || candidateEnd > length || candidateEnd - candidateStart < sampleRate * 0.2) return
+    const phase = stereoSeamQuality(channels, candidateStart, candidateEnd, sampleRate)
+    const movement = (Math.abs(candidateStart - start) + Math.abs(candidateEnd - end)) / Math.max(1, radius * 2)
+    const rank = phase - movement * 0.025
+    if (rank > bestRank) {
+      bestRank = rank
+      bestStart = candidateStart
+      bestEnd = candidateEnd
+    }
+  }
+
+  for (let startOffset = -radius; startOffset <= radius; startOffset += coarseStep) {
+    for (let endOffset = -radius; endOffset <= radius; endOffset += coarseStep) evaluate(Math.round(start + startOffset), Math.round(end + endOffset))
+  }
+  const coarseStart = bestStart
+  const coarseEnd = bestEnd
+  for (let startOffset = -coarseStep; startOffset <= coarseStep; startOffset += 1) {
+    for (let endOffset = -coarseStep; endOffset <= coarseStep; endOffset += 1) evaluate(coarseStart + startOffset, coarseEnd + endOffset)
+  }
+  return { start: bestStart, end: bestEnd, phaseScore: stereoSeamQuality(channels, bestStart, bestEnd, sampleRate) }
+}
+
 function fallbackCandidate(buffer: AudioBuffer): MusicalLoopCandidate {
   const result = findBestLoop(mixToMono(buffer), buffer.sampleRate)
   return {
@@ -151,6 +311,7 @@ function fallbackCandidate(buffer: AudioBuffer): MusicalLoopCandidate {
 
 export async function findMusicalLoops(buffer: AudioBuffer, onProgress?: ProgressCallback): Promise<MusicalLoopCandidate[]> {
   const mono = mixToMono(buffer)
+  const channels = Array.from({ length: buffer.numberOfChannels }, (_, channel) => buffer.getChannelData(channel))
   const frameSize = buffer.sampleRate >= 32_000 ? 4096 : 2048
   const hopSize = frameSize / 2
   const frameCount = Math.floor((mono.length - frameSize) / hopSize) + 1
@@ -183,36 +344,39 @@ export async function findMusicalLoops(buffer: AudioBuffer, onProgress?: Progres
     })
     previousSpectrum = extracted.amplitudeSpectrum
     if (frameIndex % 48 === 0) {
-      onProgress?.(frameIndex / frameCount * 0.58, 'Извлекаю chroma и спектральные признаки')
+      onProgress?.(frameIndex / frameCount * 0.5, 'Извлекаю многомасштабные признаки')
       await new Promise((resolve) => globalThis.setTimeout(resolve, 0))
     }
   }
 
   if (features.length < 16) return [fallbackCandidate(buffer)]
-  onProgress?.(0.62, 'Строю beat-сетку')
+  onProgress?.(0.53, 'Строю beat- и bar-сетку')
   const period = detectTempo(features, buffer.sampleRate, hopSize)
   const beats = detectBeatFrames(features, period)
-  const minLoopFrames = Math.max(period * 4, Math.floor(features.length * 0.35))
-  const sequenceSpan = Math.min(Math.round(period * 12), Math.floor(features.length * 0.25))
-  const rawCandidates: Array<{ startFrame: number; endFrame: number; score: number }> = []
+  const beatFeatures = beatSyncFeatures(features, beats, period)
+  const meter = detectMeter(beatFeatures)
+  const recurrence = buildRecurrenceMatrix(beatFeatures)
+  const minimumBeats = Math.max(meter.beatsPerBar * 2, Math.floor(beats.length * 0.3))
+  const pathSpan = Math.max(2, Math.min(meter.beatsPerBar * 3, Math.floor(beats.length * 0.2)))
+  const rawCandidates: Array<{ startIndex: number; endIndex: number; score: number; recurrence: number; rhythm: number }> = []
 
   for (let endIndex = 1; endIndex < beats.length; endIndex += 1) {
-    const endFrame = beats[endIndex]
     for (let startIndex = 0; startIndex < endIndex; startIndex += 1) {
-      const startFrame = beats[startIndex]
-      if (endFrame - startFrame < minLoopFrames) continue
-      const chromaScore = Math.max(0, cosine(features[startFrame].chroma, features[endFrame].chroma))
-      const loudnessDifference = Math.abs(features[startFrame].rmsDb - features[endFrame].rmsDb)
-      if (chromaScore < 0.62 || loudnessDifference > 9) continue
-      const forward = sequenceSimilarity(features, startFrame, endFrame, sequenceSpan, 1)
-      const backward = sequenceSimilarity(features, startFrame, endFrame, sequenceSpan, -1)
-      const continuation = Math.max(forward, backward)
-      const durationPreference = Math.min(1, (endFrame - startFrame) / Math.max(1, features.length * 0.75))
-      const score = chromaScore * 0.34 + continuation * 0.52 + Math.exp(-loudnessDifference / 6) * 0.1 + durationPreference * 0.04
-      rawCandidates.push({ startFrame, endFrame, score })
+      const beatDistance = endIndex - startIndex
+      if (beatDistance < minimumBeats) continue
+      const harmonic = Math.max(0, cosine(beatFeatures[startIndex].chroma, beatFeatures[endIndex].chroma))
+      const loudnessDifference = Math.abs(beatFeatures[startIndex].rmsDb - beatFeatures[endIndex].rmsDb)
+      if (harmonic < 0.58 || loudnessDifference > 10) continue
+      const path = recurrencePathScore(recurrence, startIndex, endIndex, pathSpan)
+      const sameBarPhase = beatDistance % meter.beatsPerBar === 0
+      const onDownbeat = startIndex % meter.beatsPerBar === meter.downbeatOffset && endIndex % meter.beatsPerBar === meter.downbeatOffset
+      const rhythm = sameBarPhase ? (onDownbeat ? 1 : 0.82) : 0.28
+      const durationPreference = Math.min(1, beatDistance / Math.max(1, beats.length * 0.72))
+      const score = harmonic * 0.25 + path * 0.48 + Math.exp(-loudnessDifference / 6) * 0.1 + rhythm * 0.13 + durationPreference * 0.04
+      rawCandidates.push({ startIndex, endIndex, score, recurrence: path, rhythm })
     }
-    if (endIndex % 24 === 0) {
-      onProgress?.(0.62 + endIndex / beats.length * 0.28, 'Сравниваю музыкальные фразы')
+    if (endIndex % 20 === 0) {
+      onProgress?.(0.56 + endIndex / beats.length * 0.26, 'Ищу диагонали повторяющихся фраз')
       await new Promise((resolve) => globalThis.setTimeout(resolve, 0))
     }
   }
@@ -221,26 +385,36 @@ export async function findMusicalLoops(buffer: AudioBuffer, onProgress?: Progres
   rawCandidates.sort((a, b) => b.score - a.score)
   const selected: MusicalLoopCandidate[] = []
   const minimumSeparation = buffer.sampleRate * 0.35
-  for (const candidate of rawCandidates) {
-    const rawStart = candidate.startFrame * hopSize
-    const rawEnd = candidate.endFrame * hopSize
-    const startSample = nearestQuietRisingCrossing(mono, buffer.sampleRate, rawStart)
-    const endSample = nearestQuietRisingCrossing(mono, buffer.sampleRate, rawEnd)
+  for (const candidate of rawCandidates.slice(0, 80)) {
+    const rawStart = beats[candidate.startIndex] * hopSize
+    const rawEnd = beats[candidate.endIndex] * hopSize
+    const crossingStart = nearestQuietRisingCrossing(mono, buffer.sampleRate, rawStart)
+    const crossingEnd = nearestQuietRisingCrossing(mono, buffer.sampleRate, rawEnd)
+    const refined = refineStereoSeam(channels, buffer.sampleRate, crossingStart, crossingEnd)
     if (selected.some((existing) =>
-      Math.abs(existing.start * buffer.sampleRate - startSample) < minimumSeparation &&
-      Math.abs(existing.end * buffer.sampleRate - endSample) < minimumSeparation,
+      Math.abs(existing.start * buffer.sampleRate - refined.start) < minimumSeparation &&
+      Math.abs(existing.end * buffer.sampleRate - refined.end) < minimumSeparation,
     )) continue
-    const localFlux = (features[candidate.startFrame].flux + features[candidate.endFrame].flux) * 0.5
-    const crossfadeMs = localFlux > 0.01 ? 8 : localFlux > 0.003 ? 15 : 25
+    const localFlux = (beatFeatures[candidate.startIndex].flux + beatFeatures[candidate.endIndex].flux) * 0.5
+    const crossfadeMs = refined.phaseScore > 0.9 ? 8 : refined.phaseScore > 0.78 || localFlux > 0.01 ? 15 : 25
+    const combined = candidate.score * 0.72 + refined.phaseScore * 0.28
     selected.push({
-      start: startSample / buffer.sampleRate,
-      end: endSample / buffer.sampleRate,
-      score: 1 - candidate.score,
-      confidence: Math.round(clamp(candidate.score * 100, 1, 99)),
+      start: refined.start / buffer.sampleRate,
+      end: refined.end / buffer.sampleRate,
+      score: 1 - combined,
+      confidence: Math.round(clamp(18 + combined * 80, 1, 97)),
       crossfadeMs,
-      label: `Музыкальный кандидат ${selected.length + 1}`,
+      label: `Fast Pro ${selected.length + 1}`,
+      diagnostics: {
+        musical: candidate.score,
+        recurrence: candidate.recurrence,
+        rhythm: candidate.rhythm,
+        phase: refined.phaseScore,
+      },
     })
+    onProgress?.(0.84 + selected.length * 0.03, 'Подгоняю фазу стереоканалов')
     if (selected.length === 5) break
+    await new Promise((resolve) => globalThis.setTimeout(resolve, 0))
   }
   onProgress?.(1, 'Готово')
   return selected.length ? selected : [fallbackCandidate(buffer)]

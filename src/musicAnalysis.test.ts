@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { findMusicalLoops, nearestQuietRisingCrossing } from './musicAnalysis'
+import {
+  findMusicalLoops,
+  nearestQuietRisingCrossing,
+  recurrencePathScore,
+  refineStereoSeam,
+  stereoSeamQuality,
+} from './musicAnalysis'
 
 describe('musical loop analysis', () => {
   it('snaps toward a quiet rising zero crossing', () => {
@@ -9,6 +15,28 @@ describe('musical loop analysis', () => {
     signal[100] = 0.002
     signal[101] = 0.02
     expect(nearestQuietRisingCrossing(signal, 1000, 104)).toBe(100)
+  })
+
+  it('rewards a continuous recurrence diagonal over an isolated match', () => {
+    const matrix = Array.from({ length: 12 }, () => new Float32Array(12))
+    matrix[2][8] = matrix[8][2] = 1
+    for (let offset = -2; offset <= 2; offset += 1) matrix[4 + offset][9 + offset] = matrix[9 + offset][4 + offset] = 0.9
+    expect(recurrencePathScore(matrix, 4, 9, 2)).toBeGreaterThan(recurrencePathScore(matrix, 2, 8, 2))
+  })
+
+  it('improves the worst-channel seam with sub-frame phase refinement', () => {
+    const sampleRate = 4000
+    const length = sampleRate * 2
+    const left = Float32Array.from({ length }, (_, index) => Math.sin(index / sampleRate * Math.PI * 2 * 137))
+    const right = Float32Array.from({ length }, (_, index) => Math.sin(index / sampleRate * Math.PI * 2 * 211 + 0.4))
+    const channels = [left, right]
+    const start = 900
+    const end = 5193
+    const before = stereoSeamQuality(channels, start, end, sampleRate)
+    const refined = refineStereoSeam(channels, sampleRate, start, end)
+    expect(refined.phaseScore).toBeGreaterThan(before)
+    expect(Math.abs(refined.start - start)).toBeLessThanOrEqual(sampleRate * 0.02 + 1)
+    expect(Math.abs(refined.end - end)).toBeLessThanOrEqual(sampleRate * 0.02 + 1)
   })
 
   it('returns a bounded candidate for repeated musical material', async () => {
