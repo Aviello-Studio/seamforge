@@ -10,6 +10,13 @@ export interface RenderedLoop {
   duration: number
 }
 
+export interface CircularInpaintPlan {
+  input: RenderedLoop
+  maskStart: number
+  maskEnd: number
+  bridgeSeconds: number
+}
+
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
 
 export function mixToMono(buffer: AudioBuffer): Float32Array {
@@ -145,6 +152,107 @@ export function audioBufferAsLoop(buffer: AudioBuffer): RenderedLoop {
     sampleRate: buffer.sampleRate,
     duration: buffer.duration,
   }
+}
+
+/**
+ * Places the old loop boundary in the middle of a context clip. The generator
+ * therefore sees music on both sides of the missing span instead of guessing a
+ * one-sided continuation from the end of the song.
+ */
+export function prepareCircularInpaint(
+  buffer: AudioBuffer,
+  startSeconds: number,
+  endSeconds: number,
+  requestedBridgeSeconds = 0.8,
+): CircularInpaintPlan | null {
+  const rate = buffer.sampleRate
+  const start = clamp(Math.round(startSeconds * rate), 0, buffer.length - 2)
+  const end = clamp(Math.round(endSeconds * rate), start + 2, buffer.length)
+  const loopLength = end - start
+  if (loopLength < rate * 4) return null
+
+  const bridge = clamp(Math.round(requestedBridgeSeconds * rate), Math.round(rate * 0.35), Math.round(rate * 1.2))
+  const half = Math.floor(bridge / 2)
+  const bodyStart = start + half
+  const bodyEnd = end - (bridge - half)
+  if (bodyEnd - bodyStart < rate * 3) return null
+  const context = Math.min(Math.round(rate * 9.6), bodyEnd - bodyStart)
+  const total = context * 2 + bridge
+  const channels: Float32Array<ArrayBuffer>[] = []
+
+  for (let channel = 0; channel < buffer.numberOfChannels; channel += 1) {
+    const source = buffer.getChannelData(channel)
+    const input = new Float32Array(total)
+    input.set(source.subarray(bodyEnd - context, bodyEnd), 0)
+    // The bridge stays zeroed; Stable Audio receives the exact mask separately.
+    input.set(source.subarray(bodyStart, bodyStart + context), context + bridge)
+    channels.push(input)
+  }
+
+  return {
+    input: { channels, sampleRate: rate, duration: total / rate },
+    maskStart: context / rate,
+    maskEnd: (context + bridge) / rate,
+    bridgeSeconds: bridge / rate,
+  }
+}
+
+/** Replaces equal halves around the old boundary with the generated bridge. */
+export function applyCircularInpaint(
+  buffer: AudioBuffer,
+  startSeconds: number,
+  endSeconds: number,
+  generated: AudioBuffer,
+  maskStartSeconds: number,
+  bridgeSeconds: number,
+): RenderedLoop {
+  const rate = buffer.sampleRate
+  const start = clamp(Math.round(startSeconds * rate), 0, buffer.length - 2)
+  const end = clamp(Math.round(endSeconds * rate), start + 2, buffer.length)
+  const bridge = clamp(Math.round(bridgeSeconds * rate), 1, end - start - 2)
+  const half = Math.floor(bridge / 2)
+  const bodyStart = start + half
+  const bodyEnd = end - (bridge - half)
+  const generatedStart = Math.round(maskStartSeconds * generated.sampleRate)
+  const generatedLength = Math.round(bridgeSeconds * generated.sampleRate)
+  const outputLength = bodyEnd - bodyStart + bridge
+  const edge = Math.max(1, Math.min(Math.round(rate * 0.035), Math.floor(bridge / 5), bodyEnd - bodyStart))
+  const channels: Float32Array<ArrayBuffer>[] = []
+
+  for (let channel = 0; channel < buffer.numberOfChannels; channel += 1) {
+    const source = buffer.getChannelData(channel)
+    const generatedChannel = generated.getChannelData(Math.min(channel, generated.numberOfChannels - 1))
+    const output = new Float32Array(outputLength)
+    output.set(source.subarray(bodyStart, bodyEnd), 0)
+    const bridgeOffset = bodyEnd - bodyStart
+    for (let i = 0; i < bridge; i += 1) {
+      const sourceIndex = generatedStart + Math.min(generatedLength - 1, Math.floor(i * generatedLength / bridge))
+      output[bridgeOffset + i] = generatedChannel[clamp(sourceIndex, 0, generatedChannel.length - 1)]
+    }
+    // The model heard a codec reconstruction of the context. Blend that decoded
+    // context back into the untouched waveform for 35 ms so the codec boundary
+    // itself cannot become a new click.
+    for (let i = 0; i < edge; i += 1) {
+      const t = edge === 1 ? 1 : i / (edge - 1)
+      const weight = 0.5 - Math.cos(t * Math.PI) * 0.5
+      const tailIndex = bridgeOffset - edge + i
+      const decodedTail = generatedChannel[clamp(generatedStart - edge + i, 0, generatedChannel.length - 1)]
+      output[tailIndex] = output[tailIndex] * (1 - weight) + decodedTail * weight
+      const decodedHead = generatedChannel[clamp(generatedStart + generatedLength + i, 0, generatedChannel.length - 1)]
+      output[i] = decodedHead * (1 - weight) + output[i] * weight
+    }
+    channels.push(output)
+  }
+  return { channels, sampleRate: rate, duration: outputLength / rate }
+}
+
+/** Lower is better. Scores both joins introduced by the generated bridge. */
+export function circularInpaintCost(loop: RenderedLoop, bridgeSeconds: number): number {
+  const bridge = clamp(Math.round(bridgeSeconds * loop.sampleRate), 1, loop.channels[0].length - 1)
+  const transition = loop.channels[0].length - bridge
+  const window = Math.max(16, Math.min(Math.round(loop.sampleRate * 0.08), bridge, transition))
+  return loop.channels.reduce((sum, channel) =>
+    sum + seamCost(channel, 0, channel.length, window) + seamCost(channel, transition, transition, window), 0) / loop.channels.length
 }
 
 export function encodeWav(loop: RenderedLoop): Uint8Array<ArrayBuffer> {

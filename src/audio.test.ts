@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { audioBufferAsLoop, encodeWav, findBestLoop, renderSeamlessLoop, trimAudioBuffer } from './audio'
+import { applyCircularInpaint, audioBufferAsLoop, encodeWav, findBestLoop, prepareCircularInpaint, renderSeamlessLoop, trimAudioBuffer } from './audio'
 
 describe('audio processing', () => {
   it('finds a valid loop inside the signal', () => {
@@ -73,5 +73,32 @@ describe('audio processing', () => {
     const seamDelta = Math.abs(output[0] - output.at(-1)!)
     const adjacentDelta = Math.abs(output[1] - output[0])
     expect(seamDelta).toBeLessThanOrEqual(adjacentDelta * 1.1 + 0.001)
+  })
+
+  it('builds a bidirectional context and preserves loop duration after inpainting', () => {
+    const sampleRate = 100
+    const samples = Float32Array.from({ length: 2000 }, (_, index) => Math.sin(index * 0.1))
+    const buffer = {
+      sampleRate,
+      length: samples.length,
+      duration: samples.length / sampleRate,
+      numberOfChannels: 1,
+      getChannelData: () => samples,
+    } as AudioBuffer
+    const plan = prepareCircularInpaint(buffer, 1, 19, 0.8)!
+    expect(plan).not.toBeNull()
+    expect(plan.input.channels[0].slice(plan.maskStart * sampleRate, plan.maskEnd * sampleRate).every((value) => value === 0)).toBe(true)
+
+    const generatedSamples = new Float32Array(plan.input.channels[0].length).fill(0.25)
+    const generated = {
+      sampleRate,
+      length: generatedSamples.length,
+      duration: generatedSamples.length / sampleRate,
+      numberOfChannels: 1,
+      getChannelData: () => generatedSamples,
+    } as AudioBuffer
+    const loop = applyCircularInpaint(buffer, 1, 19, generated, plan.maskStart, plan.bridgeSeconds)
+    expect(loop.duration).toBeCloseTo(18, 5)
+    expect(loop.channels[0].slice(-80).every((value) => value === 0.25)).toBe(true)
   })
 })

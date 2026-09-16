@@ -3,7 +3,7 @@ import { Cpu, Download, FileAudio, Gauge, Pause, Play, RotateCcw, Settings, Spar
 import WaveSurfer from 'wavesurfer.js'
 import RegionsPlugin, { type Region } from 'wavesurfer.js/dist/plugins/regions.esm.js'
 import { AudioTrimmer } from './AudioTrimmer'
-import { audioBufferAsLoop, encodeWav, renderSeamlessLoop, toAudioBuffer, trimAudioBuffer, type RenderedLoop } from './audio'
+import { applyCircularInpaint, audioBufferAsLoop, circularInpaintCost, encodeWav, prepareCircularInpaint, renderSeamlessLoop, toAudioBuffer, trimAudioBuffer, type RenderedLoop } from './audio'
 import { findMusicalLoops, type MusicalLoopCandidate } from './musicAnalysis'
 
 type Status = 'empty' | 'decoding' | 'trimming' | 'ready' | 'analyzing' | 'rendering'
@@ -48,6 +48,7 @@ function App() {
   const [processingDevice, setProcessingDevice] = useState<ProcessingDevice>('cpu')
   const [settingsDraft, setSettingsDraft] = useState<ProcessingDevice>('cpu')
   const [gpuInfo, setGpuInfo] = useState<{ available: boolean; name: string | null }>({ available: false, name: null })
+  const [generatedLoop, setGeneratedLoop] = useState<RenderedLoop | null>(null)
 
   const duration = buffer?.duration ?? 0
   const loopDuration = Math.max(0, end - start - crossfade / 1000)
@@ -187,6 +188,7 @@ function App() {
     setQuality(null)
     setLoopCandidates([])
     setSelectedCandidate(null)
+    setGeneratedLoop(null)
     setPlayhead(0)
     setPendingAudio(null)
     setStatus('ready')
@@ -224,7 +226,43 @@ function App() {
       { vocalBuffer, exhaustive: aiEnabled })
       setLoopCandidates(results)
       applyCandidate(results[0], 0)
-      setMessage(`${aiEnabled ? 'ИИ‑анализ' : 'Fast Pro'} нашёл вариантов: ${results.length}. Прослушайте стык и выберите лучший.`)
+      const best = results[0]
+      if (aiEnabled && best.confidence < 96 && window.seamforge) {
+        const bridgeSeconds = Math.min(1.1, Math.max(0.55, 0.55 + (96 - best.confidence) * 0.025))
+        const plan = prepareCircularInpaint(buffer, best.start, best.end, bridgeSeconds)
+        if (plan) {
+          try {
+            setMessage('Стык ниже 96% — создаю двусторонний ИИ‑мост…')
+            const response = await window.seamforge.generateBridges(
+              encodeWav(plan.input), plan.maskStart, plan.maskEnd, plan.input.duration,
+            )
+            if (!response.ok) throw new Error(response.error)
+            const context = audioContextRef.current ?? new AudioContext()
+            audioContextRef.current = context
+            const generatedCandidates: RenderedLoop[] = []
+            for (const bytes of response.bridges) {
+              const copy = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
+              const generated = await context.decodeAudioData(copy)
+              generatedCandidates.push(applyCircularInpaint(
+                buffer, best.start, best.end, generated, plan.maskStart, plan.bridgeSeconds,
+              ))
+            }
+            generatedCandidates.sort((a, b) => circularInpaintCost(a, plan.bridgeSeconds) - circularInpaintCost(b, plan.bridgeSeconds))
+            setGeneratedLoop(generatedCandidates[0] ?? null)
+            setMessage(`AI Bridge готов: естественный стык был ${best.confidence}%, переход дорисован с двух сторон. Прослушайте результат.`)
+          } catch (bridgeError) {
+            setGeneratedLoop(null)
+            const reason = bridgeError instanceof Error ? bridgeError.message : 'неизвестная ошибка'
+            setMessage(`Найден естественный стык ${best.confidence}%. ИИ‑мост недоступен: ${reason}`)
+          }
+        } else {
+          setMessage(`ИИ‑анализ нашёл ${results.length} вариантов. Фрагмент слишком короткий для безопасной догенерации.`)
+        }
+      } else {
+        setMessage(best.confidence >= 96 && aiEnabled
+          ? `Стык ${best.confidence}% уже неотличим на слух — генерация не потребовалась.`
+          : `${aiEnabled ? 'ИИ‑анализ' : 'Fast Pro'} нашёл вариантов: ${results.length}. Прослушайте стык и выберите лучший.`)
+      }
     } catch (error) {
       setMessage(error instanceof Error ? `Ошибка музыкального анализа: ${error.message}` : 'Музыкальный анализ не удался')
     } finally {
@@ -239,6 +277,7 @@ function App() {
     setCrossfade(candidate.crossfadeMs)
     setQuality(candidate.score)
     setSelectedCandidate(index)
+    setGeneratedLoop(null)
     syncRegion(candidate.start, candidate.end)
     const auditionPoint = Math.max(candidate.start, candidate.end - Math.min(3, (candidate.end - candidate.start) * 0.35))
     setPlayhead(auditionPoint)
@@ -246,9 +285,10 @@ function App() {
   }
 
   const rendered = useMemo<RenderedLoop | null>(() => {
+    if (generatedLoop) return generatedLoop
     if (!buffer || end <= start) return null
     return renderSeamlessLoop(buffer, start, end, crossfade)
-  }, [buffer, start, end, crossfade])
+  }, [buffer, start, end, crossfade, generatedLoop])
 
   const renderedRef = useRef<RenderedLoop | null>(null)
   const loopBoundsRef = useRef({ start: 0, end: 0 })
@@ -344,6 +384,7 @@ function App() {
     setStart(next)
     setQuality(null)
     setSelectedCandidate(null)
+    setGeneratedLoop(null)
     syncRegion(next, end)
     setPlayhead((current) => Math.max(next, Math.min(end, current)))
     stopPreview()
@@ -354,6 +395,7 @@ function App() {
     setEnd(next)
     setQuality(null)
     setSelectedCandidate(null)
+    setGeneratedLoop(null)
     syncRegion(start, next)
     setPlayhead((current) => Math.max(start, Math.min(next, current)))
     stopPreview()
@@ -393,7 +435,7 @@ function App() {
             <div className="controls-grid">
               <label><span><b>Начало</b><output>{formatTime(start)}</output></span><input type="range" min="0" max={Math.max(0, duration - 0.1)} step="0.001" value={start} onChange={(event) => updateStart(Number(event.target.value))} /></label>
               <label><span><b>Конец</b><output>{formatTime(end)}</output></span><input type="range" min="0.1" max={duration} step="0.001" value={end} onChange={(event) => updateEnd(Number(event.target.value))} /></label>
-              <label><span><b>Crossfade</b><output>{crossfade} мс</output></span><input type="range" min="5" max={Math.min(1000, Math.max(20, loopDuration * 450))} step="5" value={crossfade} onChange={(event) => { setCrossfade(Number(event.target.value)); stopPreview() }} /></label>
+              <label><span><b>Crossfade</b><output>{crossfade} мс</output></span><input type="range" min="5" max={Math.min(1000, Math.max(20, loopDuration * 450))} step="5" value={crossfade} onChange={(event) => { setCrossfade(Number(event.target.value)); setGeneratedLoop(null); stopPreview() }} /></label>
             </div>
             <div className={`ai-mode ${aiEnabled ? 'enabled' : ''}`}>
               <label className="ai-switch">
@@ -401,11 +443,12 @@ function App() {
                   setAiEnabled(event.target.checked)
                   setLoopCandidates([])
                   setSelectedCandidate(null)
+                  setGeneratedLoop(null)
                   setQuality(null)
                   setMessage(event.target.checked ? 'ИИ‑режим включён — глубокий анализ запустится по кнопке' : 'ИИ‑режим выключен — используется быстрый локальный анализ')
                 }} />
                 <span aria-hidden="true" />
-                <div><strong>Включить ИИ‑режим</strong><small>BS‑RoFormer отделит вокал и поможет не разрезать слова</small></div>
+                <div><strong>Включить ИИ‑режим</strong><small>BS‑RoFormer защищает вокал, AI Bridge дорисует только сложный стык ниже 96%</small></div>
               </label>
               <em>{aiEnabled ? aiRuntimeLabel : 'Fast Pro без модели'}</em>
             </div>

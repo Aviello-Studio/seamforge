@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process'
-import { access, copyFile, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
+import { access, copyFile, cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 import type { ProcessingDevice } from './settings.js'
@@ -9,6 +9,9 @@ const MODEL = 'model_bs_roformer_ep_317_sdr_12.9755.ckpt'
 const UV_URL = 'https://github.com/astral-sh/uv/releases/latest/download/uv-x86_64-pc-windows-msvc.zip'
 const FFMPEG_URL = 'https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-lgpl.zip'
 const TORCH_CUDA_INDEX = 'https://download.pytorch.org/whl/cu130'
+const STABLE_AUDIO_REVISION = '779434a908193105335fd8d833418603625b2859'
+const STABLE_AUDIO_URL = `https://github.com/Stability-AI/stable-audio-3/archive/${STABLE_AUDIO_REVISION}.zip`
+const BRIDGE_PACKAGES = ['ai-edge-litert>=2.2.0', 'sentencepiece>=0.2', 'huggingface_hub>=0.20']
 
 export type AiRuntimeState = {
   ready: boolean
@@ -49,6 +52,9 @@ export function aiPaths(userData: string) {
     readyMarker: join(root, 'runtime', '.seamforge-ready'),
     deviceMarker: join(root, 'runtime', '.seamforge-device'),
     models: join(root, 'models'),
+    bridgeRoot: join(root, 'stable-audio-bridge'),
+    bridgeScript: join(root, 'stable-audio-bridge', 'scripts', 'sa3_tflite.py'),
+    bridgeMarker: join(root, 'runtime', '.seamforge-bridge-ready'),
   }
 }
 
@@ -214,6 +220,83 @@ export async function separateVocals(
       ?? files.find((file) => /\.wav$/i.test(file))
     if (!vocalFile) throw new Error('Модель не вернула вокальную дорожку')
     return new Uint8Array(await readFile(join(output, vocalFile)))
+  } finally {
+    await rm(work, { recursive: true, force: true })
+  }
+}
+
+async function ensureBridgeRuntime(paths: ReturnType<typeof aiPaths>, onProgress: Progress) {
+  if (!(await exists(paths.bridgeScript))) {
+    onProgress('ИИ‑мост: устанавливаю компактный Stable Audio 3…')
+    const archive = join(paths.root, 'stable-audio-3.zip')
+    const unpacked = join(paths.root, 'stable-audio-unpacked')
+    const response = await fetch(STABLE_AUDIO_URL)
+    if (!response.ok) throw new Error(`Не удалось загрузить Stable Audio 3: HTTP ${response.status}`)
+    await writeFile(archive, Buffer.from(await response.arrayBuffer()))
+    try {
+      await mkdir(unpacked, { recursive: true })
+      await run('tar', ['-xf', archive, '-C', unpacked])
+      const roots = await readdir(unpacked)
+      const source = join(unpacked, roots[0], 'optimized', 'tflite')
+      if (!(await exists(join(source, 'scripts', 'sa3_tflite.py')))) throw new Error('Архив Stable Audio 3 повреждён')
+      await rm(paths.bridgeRoot, { recursive: true, force: true })
+      await cp(source, paths.bridgeRoot, { recursive: true })
+    } finally {
+      await rm(archive, { force: true })
+      await rm(unpacked, { recursive: true, force: true })
+    }
+  }
+  if (!(await exists(paths.bridgeMarker))) {
+    onProgress('ИИ‑мост: устанавливаю LiteRT без второго PyTorch…')
+    await run(paths.uv, ['pip', 'install', '--python', paths.python, ...BRIDGE_PACKAGES], (line) => {
+      if (/download|installed/i.test(line)) onProgress(`ИИ‑мост: ${line}`)
+    })
+    await run(paths.python, ['-c', 'import ai_edge_litert, sentencepiece, huggingface_hub'])
+    await writeFile(paths.bridgeMarker, `stable-audio-3=${STABLE_AUDIO_REVISION}\nprecision=w8a32\n`)
+  }
+}
+
+export async function generateLoopBridges(
+  userData: string,
+  wavBytes: Uint8Array,
+  maskStart: number,
+  maskEnd: number,
+  duration: number,
+  onProgress: Progress,
+  device: ProcessingDevice = 'cpu',
+): Promise<Uint8Array[]> {
+  const paths = await ensureAiRuntime(userData, onProgress, device)
+  await ensureBridgeRuntime(paths, onProgress)
+  const work = await mkdtemp(join(tmpdir(), 'seamforge-bridge-'))
+  const input = join(work, 'circular-context.wav')
+  await writeFile(input, Buffer.from(wavBytes))
+  const results: Uint8Array[] = []
+  try {
+    for (let variant = 0; variant < 2; variant += 1) {
+      const output = join(work, `bridge-${variant}.wav`)
+      onProgress(`ИИ‑мост: создаю вариант ${variant + 1} из 2…`)
+      await run(paths.python, [
+        paths.bridgeScript,
+        '--dit', 'sm-music',
+        '--decoder', 'same-s',
+        '--dit-precision', 'w8a32',
+        '--encoder-precision', 'w8a8',
+        '--decoder-precision', 'w8a8',
+        '--init-audio', input,
+        '--inpaint-range', `${maskStart.toFixed(4)},${maskEnd.toFixed(4)}`,
+        '--seconds', duration.toFixed(4),
+        '--steps', '8',
+        '--seed', String(7319 + variant * 104729),
+        '--prompt', 'instrumental music transition matching the surrounding rhythm, harmony, timbre and tempo, clean seamless continuation, no vocals',
+        '--out', output,
+      ], (line) => {
+        if (/download|fetching/i.test(line)) onProgress('ИИ‑мост: загружаю компактную модель один раз…')
+        else if (/sampling|encode|decode|saved/i.test(line)) onProgress(`ИИ‑мост: ${line}`)
+      }, { ...process.env, PATH: `${join(paths.root, 'tools')};${process.env.PATH ?? ''}` })
+      if (!(await exists(output))) throw new Error('Stable Audio 3 не вернул аудиомост')
+      results.push(new Uint8Array(await readFile(output)))
+    }
+    return results
   } finally {
     await rm(work, { recursive: true, force: true })
   }

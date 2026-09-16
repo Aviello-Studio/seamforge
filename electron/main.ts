@@ -2,7 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { writeFile } from 'node:fs/promises'
-import { getAiRuntimeState, separateVocals } from './aiRuntime.js'
+import { generateLoopBridges, getAiRuntimeState, separateVocals } from './aiRuntime.js'
 import { loadSettings, saveSettings } from './settings.js'
 import { detectNvidiaGpu } from './aiRuntime.js'
 
@@ -61,6 +61,18 @@ ipcMain.handle('ai-separate-vocals', async (event, bytes: Uint8Array) => {
     return { ok: true as const, vocals }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Неизвестная ошибка ИИ‑движка'
+    return { ok: false as const, error: message }
+  }
+})
+
+ipcMain.handle('ai-generate-bridges', async (event, bytes: Uint8Array, maskStart: number, maskEnd: number, duration: number) => {
+  const progress = (message: string) => event.sender.send('ai-progress', message)
+  try {
+    const settings = await loadSettings(app.getPath('userData'))
+    const bridges = await generateLoopBridges(app.getPath('userData'), bytes, maskStart, maskEnd, duration, progress, settings.processingDevice)
+    return { ok: true as const, bridges }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Неизвестная ошибка генеративного моста'
     return { ok: false as const, error: message }
   }
 })

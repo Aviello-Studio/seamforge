@@ -13,6 +13,10 @@ contextBridge.exposeInMainWorld('seamforge', {
   separateVocals: (bytes: Uint8Array) => ipcRenderer.invoke('ai-separate-vocals', bytes) as Promise<
     { ok: true; vocals: Uint8Array } | { ok: false; error: string }
   >,
+  generateBridges: (bytes: Uint8Array, maskStart: number, maskEnd: number, duration: number) =>
+    ipcRenderer.invoke('ai-generate-bridges', bytes, maskStart, maskEnd, duration) as Promise<
+      { ok: true; bridges: Uint8Array[] } | { ok: false; error: string }
+    >,
   onAiProgress: (listener: (message: string) => void) => {
     const wrapped = (_event: Electron.IpcRendererEvent, message: string) => listener(message)
     ipcRenderer.on('ai-progress', wrapped)

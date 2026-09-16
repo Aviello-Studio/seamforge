@@ -12,6 +12,9 @@ interface Window {
     separateVocals(bytes: Uint8Array<ArrayBuffer>): Promise<
       { ok: true; vocals: Uint8Array<ArrayBuffer> } | { ok: false; error: string }
     >
+    generateBridges(bytes: Uint8Array<ArrayBuffer>, maskStart: number, maskEnd: number, duration: number): Promise<
+      { ok: true; bridges: Uint8Array<ArrayBuffer>[] } | { ok: false; error: string }
+    >
     onAiProgress(listener: (message: string) => void): () => void
   }
 }
