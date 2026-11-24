@@ -60,7 +60,7 @@ export function TitleBar({
 
   return (
     <header className="titlebar" data-tauri-drag-region>
-      <div className="titlebar-brand" data-tauri-drag-region>
+      <div className="titlebar-brand" title="SeamForge — Aviello Studio" data-tauri-drag-region>
         <img
           src={appIcon}
           alt=""
@@ -73,6 +73,11 @@ export function TitleBar({
         <span className="titlebar-wordmark" data-tauri-drag-region>
           SeamForge
         </span>
+        {audio === null && (
+          <span className="titlebar-studio" data-tauri-drag-region>
+            by Aviello Studio
+          </span>
+        )}
       </div>
 
       <div className="titlebar-meta" data-tauri-drag-region>

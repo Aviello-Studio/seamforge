@@ -84,6 +84,8 @@ export function EmptyDropzone({
             <dd>{t.emptySpec3Desc}</dd>
           </div>
         </dl>
+
+        <p className="empty-credit">Made by Aviello Studio</p>
       </div>
     </section>
   )

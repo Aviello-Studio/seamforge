@@ -342,6 +342,13 @@ select:focus-visible {
   color: var(--text-primary);
 }
 
+.titlebar-studio {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.01em;
+}
+
 .titlebar-meta {
   display: flex;
   align-items: center;
@@ -658,6 +665,16 @@ select:focus-visible {
   font-size: 11px;
   line-height: 1.45;
   color: var(--text-muted);
+}
+
+.empty-credit {
+  margin: 18px 0 0;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  opacity: 0.8;
 }
 
 /* ==========================================================================

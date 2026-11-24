@@ -45,16 +45,16 @@
   <rect x="38" y="131" width="396" height="14" rx="4" fill="#121417" stroke="#232730" stroke-width="1"/>
   <rect x="38" y="131" width="396" height="14" rx="4" fill="url(#v1Bar)"/>
 
-  <!-- Left Row 2: v2 EXE 7.01 MB (7.01/350 * 396 = 7.93px) -->
+  <!-- Left Row 2: v2 EXE 6.92 MB (6.92/350 * 396 = 7.83px) -->
   <text x="38" y="172" class="sans" font-size="12" font-weight="600" fill="#eceff4">SeamForge v2 (Tauri + Rust EXE)</text>
-  <text x="434" y="172" text-anchor="end" class="mono" font-size="12" font-weight="700" fill="#e59a3c">7.01 MB</text>
+  <text x="434" y="172" text-anchor="end" class="mono" font-size="12" font-weight="700" fill="#e59a3c">6.92 MB</text>
   <rect x="38" y="179" width="396" height="14" rx="4" fill="#121417" stroke="#232730" stroke-width="1"/>
   <rect x="38" y="179" width="8" height="14" rx="3" fill="url(#amberBar)"/>
   <text x="54" y="190" class="mono" font-size="10.5" fill="#8b949e">single standalone EXE, zero extra DLLs</text>
 
-  <!-- Left Row 3: v2 ZIP 3.01 MB (3.01/350 * 396 = 3.41px) -->
+  <!-- Left Row 3: v2 ZIP 2.92 MB (2.92/350 * 396 = 3.30px) -->
   <text x="38" y="220" class="sans" font-size="12" font-weight="600" fill="#eceff4">SeamForge v2 (ZIP Archive)</text>
-  <text x="434" y="220" text-anchor="end" class="mono" font-size="12" font-weight="700" fill="#5da3e0">3.01 MB</text>
+  <text x="434" y="220" text-anchor="end" class="mono" font-size="12" font-weight="700" fill="#5da3e0">2.92 MB</text>
   <rect x="38" y="227" width="396" height="14" rx="4" fill="#121417" stroke="#232730" stroke-width="1"/>
   <rect x="38" y="227" width="4" height="14" rx="2" fill="url(#blueBar)"/>
   <text x="50" y="238" class="mono" font-size="10.5" fill="#8b949e">portable release archive (SeamForge-portable.zip)</text>

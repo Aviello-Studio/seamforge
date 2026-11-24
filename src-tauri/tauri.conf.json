@@ -30,6 +30,8 @@
   },
   "bundle": {
     "active": false,
+    "publisher": "Aviello Studio",
+    "copyright": "Copyright (c) 2026 Aviello Studio",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

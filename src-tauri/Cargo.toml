@@ -2,7 +2,7 @@
 name = "seamforge"
 version = "2.0.0"
 description = "Precision desktop studio for seamless musical audio loops"
-authors = ["NIGATAulxgenii"]
+authors = ["Aviello Studio"]
 license = "MIT"
 repository = "https://github.com/NIGATAulxgenii/seamforge"
 edition = "2024"

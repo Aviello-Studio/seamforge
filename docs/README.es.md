@@ -4,7 +4,7 @@
 
 # SeamForge
 
-**Estudio de escritorio de precisión para bucles musicales sin cortes**
+**Estudio de escritorio de precisión para bucles musicales sin cortes** · *por **Aviello Studio***
 
 [![CI](https://github.com/NIGATAulxgenii/seamforge/actions/workflows/ci.yml/badge.svg)](https://github.com/NIGATAulxgenii/seamforge/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/badge/Release-v2.0.0-e59a3c.svg)](https://github.com/NIGATAulxgenii/seamforge/releases)
@@ -15,7 +15,7 @@
 
 [English](../README.md) · [Русский](README.ru.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · **Español** · [Deutsch](README.de.md)
 
-DSP multihilo en Rust sin conexión · Extracción directa de audio desde vídeo sin FFmpeg · EXE portátil autónomo de 7.01 MB
+DSP multihilo en Rust sin conexión · Extracción directa de audio desde vídeo sin FFmpeg · EXE portátil autónomo de 6.92 MB
 
 <br/>
 
@@ -29,7 +29,7 @@ DSP multihilo en Rust sin conexión · Extracción directa de audio desde vídeo
 
 **SeamForge v2** localiza automáticamente puntos de bucle musicalmente coherentes en archivos de audio y vídeo, alinea la fase estéreo en el empalme, muestra el cruce en un osciloscopio en tiempo real y exporta archivos WAV limpios a la frecuencia de muestreo original — 100 % sin conexión, sin DLL externas, sin descargar FFmpeg y con 6 idiomas integrados.
 
-Reescrito de Electron a **Tauri v2 + Rust**, la versión v2 reduce la huella portátil en Windows de **~350 MB a 7.01 MB** (**~50× más ligero**, `3.01 MB` en ZIP) mientras cuadruplica la resolución temporal del análisis STFT de **46.4 ms a 11.6 ms** (**4× más preciso**).
+Reescrito de Electron a **Tauri v2 + Rust**, la versión v2 reduce la huella portátil en Windows de **~350 MB a 6.92 MB** (**~50× más ligero**, `2.92 MB` en ZIP) mientras cuadruplica la resolución temporal del análisis STFT de **46.4 ms a 11.6 ms** (**4× más preciso**).
 
 <div align="center">
 
@@ -43,7 +43,7 @@ Reescrito de Electron a **Tauri v2 + Rust**, la versión v2 reduce la huella por
 
 | Característica | **SeamForge v2** | SeamForge v1 (anterior) | PyMusicLooper | Audacity |
 | :--- | :--- | :--- | :--- | :--- |
-| **Stack y tamaño** | Tauri v2 + Rust (`7.01 MB` EXE único, `3.01 MB` ZIP) | Electron + JS (`~350 MB` portátil + caché IA opcional de `5.7 GB`) | CLI en Python / TUI opcional (requiere Python + NumPy/SciPy/librosa) | C++ / wxWidgets (instalación de `~120+ MB`) |
+| **Stack y tamaño** | Tauri v2 + Rust (`6.92 MB` EXE único, `2.92 MB` ZIP) | Electron + JS (`~350 MB` portátil + caché IA opcional de `5.7 GB`) | CLI en Python / TUI opcional (requiere Python + NumPy/SciPy/librosa) | C++ / wxWidgets (instalación de `~120+ MB`) |
 | **Motor DSP** | Rust multihilo (`rustfft` + `rayon`), paso de `11.6 ms` (`hop=512`), seguimiento de pulso Ellis DP | JS monohilo (`Meyda`), paso de `46.4 ms` (`hop=2048`) | Análisis musical de bucles y ataques en Python (`librosa` / SciPy) | Editor de audio general (búsqueda manual de bucles) |
 | **Búsqueda automática de bucles** | Hasta 8 candidatos clasificados (armonía, frase, ritmo y fase) | Búsqueda básica de bucles | Sólida detección automática de bucles musicales | Selección manual (sin ranking por matriz de recurrencia) |
 | **Osciloscopio de empalme** | Superposición en vivo de fin, inicio y mezcla + ajuste ±1/±10 ms | Ninguno | Flujo en terminal / CLI (sin editor visual de osciloscopio) | Línea de tiempo de onda (sin superposición de fase en vivo) |
@@ -109,8 +109,8 @@ flowchart LR
 Compilación portátil lista para Windows 10/11 (x64) — sin instalador, sin DLL adicionales y sin entornos externos:
 
 1. Abre **[GitHub Releases](https://github.com/NIGATAulxgenii/seamforge/releases)**.
-2. Descarga `SeamForge-portable.zip` (`3.01 MB`) y extráelo en cualquier carpeta.
-3. Ejecuta `SeamForge.exe` (ejecutable autónomo de `7.01 MB`).
+2. Descarga `SeamForge-portable.zip` (`2.92 MB`) y extráelo en cualquier carpeta.
+3. Ejecuta `SeamForge.exe` (ejecutable autónomo de `6.92 MB`).
 
 ---
 
@@ -170,5 +170,5 @@ npm run dist:portable
 
 ## Licencia
 
-Distribuido bajo la **[Licencia MIT](../LICENSE)**.  
+Creado por **Aviello Studio**. Distribuido bajo la **[Licencia MIT](../LICENSE)**.  
 Las licencias y atribuciones de bibliotecas de código abierto de terceros (incluido el aviso MPL-2.0 de `symphonia`) se encuentran en [THIRD_PARTY_LICENSES.md](../THIRD_PARTY_LICENSES.md).
