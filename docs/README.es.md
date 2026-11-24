@@ -13,7 +13,7 @@
 
 [English](../README.md) · [Русский](README.ru.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · **Español** · [Deutsch](README.de.md)
 
-DSP multihilo en Rust sin conexión · Extracción directa de audio desde vídeo sin FFmpeg · EXE portátil autónomo de 6.86 MB
+DSP multihilo en Rust sin conexión · Extracción directa de audio desde vídeo sin FFmpeg · EXE portátil autónomo de 6.87 MB
 
 <br/>
 
@@ -27,7 +27,7 @@ DSP multihilo en Rust sin conexión · Extracción directa de audio desde vídeo
 
 **SeamForge v2** localiza automáticamente puntos de bucle musicalmente coherentes en archivos de audio y vídeo, alinea la fase estéreo en el empalme, muestra el cruce en un osciloscopio en tiempo real y exporta archivos WAV limpios a la frecuencia de muestreo original — 100 % sin conexión, sin DLL externas, sin descargar FFmpeg y con 6 idiomas integrados.
 
-Reescrito de Electron a **Tauri v2 + Rust**, la versión v2 reduce la huella portátil en Windows de **~350 MB a 6.86 MB** (**~51× más ligero**, `2.86 MB` en ZIP) mientras cuadruplica la resolución temporal del análisis STFT de **46.4 ms a 11.6 ms** (**4× más preciso**).
+Reescrito de Electron a **Tauri v2 + Rust**, la versión v2 reduce la huella portátil en Windows de **~350 MB a 6.87 MB** (**~51× más ligero**, `2.87 MB` en ZIP) mientras cuadruplica la resolución temporal del análisis STFT de **46.4 ms a 11.6 ms** (**4× más preciso**).
 
 <div align="center">
 
@@ -41,11 +41,11 @@ Reescrito de Electron a **Tauri v2 + Rust**, la versión v2 reduce la huella por
 
 | Característica | **SeamForge v2** | SeamForge v1 (anterior) | PyMusicLooper | Audacity |
 | :--- | :--- | :--- | :--- | :--- |
-| **Stack y tamaño** | Tauri v2 + Rust (`6.86 MB` EXE único, `2.86 MB` ZIP) | Electron + JS (`~350 MB` portátil + caché IA opcional de `5.7 GB`) | CLI en Python / TUI opcional (requiere Python + NumPy/SciPy/librosa) | C++ / wxWidgets (instalación de `~120+ MB`) |
+| **Stack y tamaño** | Tauri v2 + Rust (`6.87 MB` EXE único, `2.87 MB` ZIP) | Electron + JS (`~350 MB` portátil + caché IA opcional de `5.7 GB`) | CLI en Python / TUI opcional (requiere Python + NumPy/SciPy/librosa) | C++ / wxWidgets (instalación de `~120+ MB`) |
 | **Motor DSP** | Rust multihilo (`rustfft` + `rayon`), paso de `11.6 ms` (`hop=512`), seguimiento de pulso Ellis DP | JS monohilo (`Meyda`), paso de `46.4 ms` (`hop=2048`) | Análisis musical de bucles y ataques en Python (`librosa` / SciPy) | Editor de audio general (búsqueda manual de bucles) |
 | **Búsqueda automática de bucles** | Hasta 8 candidatos clasificados (armonía, frase, ritmo y fase) | Búsqueda básica de bucles | Sólida detección automática de bucles musicales | Selección manual (sin ranking por matriz de recurrencia) |
 | **Osciloscopio de empalme** | Superposición en vivo de fin, inicio y mezcla + ajuste ±1/±10 ms | Ninguno | Flujo en terminal / CLI (sin editor visual de osciloscopio) | Línea de tiempo de onda (sin superposición de fase en vivo) |
-| **Extracción directa de vídeo** | Nativa con `symphonia` + Windows Media Foundation (10 contenedores, sin FFmpeg) | Requería FFmpeg | CLI orientado a audio (depende de decodificadores externos) | Requiere biblioteca FFmpeg opcional para la mayoría de vídeos |
+| **Extracción directa de vídeo** | Nativa con `symphonia` + Windows Media Foundation (10 contenedores, sin FFmpeg) | No (solo archivos de audio) | CLI orientado a audio (depende de decodificadores externos) | Requiere biblioteca FFmpeg opcional para la mayoría de vídeos |
 | **Reproducción y exportación** | WASAPI sin pausas (`cpal`), WAV `16-bit` (TPDF), `24-bit`, `32-bit float` a frecuencia original | Solo WAV `16-bit` remuestreado por Web Audio | Previsualización y exportación vía bibliotecas Python | Edición multipista y exportación completa |
 | **Idiomas de interfaz** | 6 integrados (`EN`, `RU`, `ZH`, `JA`, `ES`, `DE`) | Solo ruso | CLI en inglés | Interfaz de escritorio multilingüe |
 
@@ -107,8 +107,8 @@ flowchart LR
 Compilación portátil lista para Windows 10/11 (x64) — sin instalador, sin DLL adicionales y sin entornos externos:
 
 1. Abre **[GitHub Releases](https://github.com/NIGATAulxgenii/seamforge/releases)**.
-2. Descarga `SeamForge-portable.zip` (`2.86 MB`) y extráelo en cualquier carpeta.
-3. Ejecuta `SeamForge.exe` (ejecutable autónomo de `6.86 MB`).
+2. Descarga `SeamForge-portable.zip` (`2.87 MB`) y extráelo en cualquier carpeta.
+3. Ejecuta `SeamForge.exe` (ejecutable autónomo de `6.87 MB`).
 
 ---
 
@@ -141,7 +141,7 @@ src-tauri/src/
 src/
 ├── api/          # Puente IPC tipado con Tauri y diálogos nativos del sistema
 ├── components/   # WaveformCanvas, SeamInspector, CandidateSidebar, TransportBar, TrimModal, TitleBar
-└── lib/          # Utilidades de formato de tiempo, frecuencia y nombres de archivo + pruebas unitarias
+└── lib/          # i18n en 6 idiomas, utilidades de formato y pruebas unitarias
 ```
 
 ---

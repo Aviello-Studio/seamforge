@@ -13,7 +13,7 @@
 
 [English](../README.md) · [Русский](README.ru.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · [Español](README.es.md) · **Deutsch**
 
-Offline-Multithreading-DSP in Rust · Direkte Audioextraktion aus Videos ohne FFmpeg · 6.86 MB portable Einzel-EXE
+Offline-Multithreading-DSP in Rust · Direkte Audioextraktion aus Videos ohne FFmpeg · 6.87 MB portable Einzel-EXE
 
 <br/>
 
@@ -27,7 +27,7 @@ Offline-Multithreading-DSP in Rust · Direkte Audioextraktion aus Videos ohne FF
 
 **SeamForge v2** findet automatisch musikalisch stimmige Loop-Grenzen in Audio- und Videodateien, richtet die Stereophase am Übergang präzise aus, visualisiert die Schnittstelle live im Oszilloskop und exportiert saubere WAV-Dateien in exakter Original-Abtastrate — 100 % offline, ohne externe DLLs, ohne FFmpeg-Download und mit 6 integrierten UI-Sprachen.
 
-Durch die Neuentwicklung von Electron auf **Tauri v2 + Rust** sinkt der portable Windows-Footprint von **~350 MB auf 6.86 MB** (**~51× kleiner**, `2.86 MB` als ZIP), während die zeitliche STFT-Auflösung von **46.4 ms auf 11.6 ms** vervierfacht wird (**4× feiner**).
+Durch die Neuentwicklung von Electron auf **Tauri v2 + Rust** sinkt der portable Windows-Footprint von **~350 MB auf 6.87 MB** (**~51× kleiner**, `2.87 MB` als ZIP), während die zeitliche STFT-Auflösung von **46.4 ms auf 11.6 ms** vervierfacht wird (**4× feiner**).
 
 <div align="center">
 
@@ -41,11 +41,11 @@ Durch die Neuentwicklung von Electron auf **Tauri v2 + Rust** sinkt der portable
 
 | Funktion | **SeamForge v2** | SeamForge v1 (Altversion) | PyMusicLooper | Audacity |
 | :--- | :--- | :--- | :--- | :--- |
-| **Stack & Größe** | Tauri v2 + Rust (`6.86 MB` Einzel-EXE, `2.86 MB` ZIP) | Electron + JS (`~350 MB` Ordner + opt. `5.7 GB` KI-Cache) | Python-CLI / opt. TUI (erfordert Python + NumPy/SciPy/librosa) | C++ / wxWidgets (`~120+ MB` Desktop-Installation) |
+| **Stack & Größe** | Tauri v2 + Rust (`6.87 MB` Einzel-EXE, `2.87 MB` ZIP) | Electron + JS (`~350 MB` Ordner + opt. `5.7 GB` KI-Cache) | Python-CLI / opt. TUI (erfordert Python + NumPy/SciPy/librosa) | C++ / wxWidgets (`~120+ MB` Desktop-Installation) |
 | **DSP-Analyse-Engine** | Multithreaded Rust (`rustfft` + `rayon`), `11.6 ms` Hop (`hop=512`), Ellis-DP-Beat-Tracking | Singlethreaded JS (`Meyda`), `46.4 ms` Hop (`hop=2048`) | Python-Musikanalyse für Loops & Onsets (`librosa` / SciPy) | Allgemeiner Audioeditor (manuelle Loop-Suche) |
 | **Auto-Loop-Erkennung** | Bis zu 8 bewertete Kandidaten (Harmonie, Phrase, Rhythmus, Phase) | Einfache Loop-Suche | Starke automatische musikalische Loop-Erkennung | Manuelle Auswahl (kein Beat-/Chroma-Rekurrenz-Ranking) |
 | **Naht-Oszilloskop** | Live-Überlagerung von Ende, Anfang & Überblendung + ±1/±10 ms Feintuning | Nein | Terminal-/CLI-Workflow (kein visuelles Oszilloskop) | Wellenform-Timeline (kein Live-Phasen-Overlay) |
-| **Direkter Video-Import** | Nativ via `symphonia` + Windows Media Foundation (10 Container, ohne FFmpeg) | Benötigte FFmpeg | Audio-fokussierte CLI (nutzt externe Decoder-Backends) | Erfordert optionale FFmpeg-Bibliothek für die meisten Videos |
+| **Direkter Video-Import** | Nativ via `symphonia` + Windows Media Foundation (10 Container, ohne FFmpeg) | Nein (nur Audiodateien) | Audio-fokussierte CLI (nutzt externe Decoder-Backends) | Erfordert optionale FFmpeg-Bibliothek für die meisten Videos |
 | **Wiedergabe & Export** | Gapless WASAPI (`cpal`), `16-bit` (TPDF), `24-bit`, `32-bit float` WAV in Originalrate | Nur über Web Audio resampeltes `16-bit` WAV | Vorschau & Export über Python-Audiobibliotheken | Vollständige Mehrspurbearbeitung & Export |
 | **UI-Sprachen** | 6 integriert (`EN`, `RU`, `ZH`, `JA`, `ES`, `DE`) | Nur Russisch | Englische CLI | Mehrsprachige Desktop-UI |
 
@@ -107,8 +107,8 @@ flowchart LR
 Sofort einsatzbereiter Windows 10/11 (x64) Portable-Build — kein Installer, keine zusätzlichen DLLs, keine externe Runtime:
 
 1. Öffne **[GitHub Releases](https://github.com/NIGATAulxgenii/seamforge/releases)**.
-2. Lade `SeamForge-portable.zip` (`2.86 MB`) herunter und entpacke das Archiv.
-3. Starte `SeamForge.exe` (`6.86 MB` eigenständige Programmdatei).
+2. Lade `SeamForge-portable.zip` (`2.87 MB`) herunter und entpacke das Archiv.
+3. Starte `SeamForge.exe` (`6.87 MB` eigenständige Programmdatei).
 
 ---
 
@@ -141,7 +141,7 @@ src-tauri/src/
 src/
 ├── api/          # Typisierte Tauri-IPC-Brücke und native Dateidialoge
 ├── components/   # WaveformCanvas, SeamInspector, CandidateSidebar, TransportBar, TrimModal, TitleBar
-└── lib/          # Hilfsfunktionen für Zeit-, Samplerate- & Dateinamen-Formatierung + Unit-Tests
+└── lib/          # 6-Sprachen-i18n, Formatierungs-Hilfsfunktionen & Unit-Tests
 ```
 
 ---
