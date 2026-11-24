@@ -1,43 +1,42 @@
 $ErrorActionPreference = 'Stop'
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
-$electronSource = Join-Path $projectRoot 'node_modules\electron\dist'
+$binary = Join-Path $projectRoot 'src-tauri\target\release\seamforge.exe'
 $releaseRoot = Join-Path $projectRoot 'release'
-$builderFallback = Join-Path $releaseRoot 'win-unpacked.tmp'
-$target = Join-Path $releaseRoot 'SeamForge-portable'
-$appTarget = Join-Path $target 'resources\app'
-$reuseExisting = $false
+$portableDir = Join-Path $releaseRoot 'SeamForge-portable'
+$archivePath = Join-Path $releaseRoot 'SeamForge-portable.zip'
 
-if (-not (Test-Path -LiteralPath (Join-Path $electronSource 'electron.exe'))) {
-  if (Test-Path -LiteralPath (Join-Path $builderFallback 'electron.exe')) {
-    $electronSource = $builderFallback
-  } elseif (Test-Path -LiteralPath (Join-Path $target 'SeamForge.exe')) {
-    $reuseExisting = $true
-  } else {
-    throw 'Electron runtime not found. Run npm install first.'
-  }
+if (-not (Test-Path -LiteralPath $binary)) {
+  throw "Release binary not found at $binary. Run 'npm run tauri:build' first."
 }
 
-if ((Test-Path -LiteralPath $target) -and -not $reuseExisting) {
-  $resolvedTarget = (Resolve-Path -LiteralPath $target).Path
+New-Item -ItemType Directory -Path $releaseRoot -Force | Out-Null
+
+if (Test-Path -LiteralPath $portableDir) {
+  $resolvedPortable = (Resolve-Path -LiteralPath $portableDir).Path
   $resolvedRelease = (Resolve-Path -LiteralPath $releaseRoot).Path
-  if (-not $resolvedTarget.StartsWith($resolvedRelease + [IO.Path]::DirectorySeparatorChar)) {
-    throw "Refusing to remove an output outside release: $resolvedTarget"
+  if (-not $resolvedPortable.StartsWith($resolvedRelease + [IO.Path]::DirectorySeparatorChar)) {
+    throw "Refusing to remove directory outside release: $resolvedPortable"
   }
-  Remove-Item -LiteralPath $resolvedTarget -Recurse -Force
+  Remove-Item -LiteralPath $resolvedPortable -Recurse -Force
 }
 
-if (-not $reuseExisting) {
-  New-Item -ItemType Directory -Path $target -Force | Out-Null
-  Copy-Item -Path (Join-Path $electronSource '*') -Destination $target -Recurse -Force
-  Rename-Item -LiteralPath (Join-Path $target 'electron.exe') -NewName 'SeamForge.exe'
+New-Item -ItemType Directory -Path $portableDir -Force | Out-Null
+Copy-Item -LiteralPath $binary -Destination (Join-Path $portableDir 'SeamForge.exe') -Force
+foreach ($doc in @('LICENSE', 'THIRD_PARTY_LICENSES.md')) {
+  $docPath = Join-Path $projectRoot $doc
+  if (Test-Path -LiteralPath $docPath) {
+    Copy-Item -LiteralPath $docPath -Destination (Join-Path $portableDir $doc) -Force
+  }
 }
-if (Test-Path -LiteralPath $appTarget) {
-  Remove-Item -LiteralPath $appTarget -Recurse -Force
-}
-New-Item -ItemType Directory -Path $appTarget -Force | Out-Null
-Copy-Item -LiteralPath (Join-Path $projectRoot 'dist') -Destination $appTarget -Recurse
-Copy-Item -LiteralPath (Join-Path $projectRoot 'dist-electron') -Destination $appTarget -Recurse
-Copy-Item -LiteralPath (Join-Path $projectRoot 'package.json') -Destination $appTarget
 
-Write-Host "Portable build ready: $target"
+if (Test-Path -LiteralPath $archivePath) {
+  Remove-Item -LiteralPath $archivePath -Force
+}
+
+Compress-Archive -Path (Join-Path $portableDir '*') -DestinationPath $archivePath -CompressionLevel Optimal
+
+$exeMb = [math]::Round((Get-Item -LiteralPath (Join-Path $portableDir 'SeamForge.exe')).Length / 1MB, 2)
+$zipMb = [math]::Round((Get-Item -LiteralPath $archivePath).Length / 1MB, 2)
+Write-Host "Portable folder: $portableDir\SeamForge.exe ($exeMb MB)"
+Write-Host "Portable archive: $archivePath ($zipMb MB)"
