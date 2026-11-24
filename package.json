@@ -1,56 +1,37 @@
 {
   "name": "seamforge",
-  "version": "0.1.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "A private desktop tool for creating seamless audio loops.",
+  "description": "Precision desktop studio for seamless musical audio loops.",
   "author": "SeamForge",
+  "license": "MIT",
   "type": "module",
-  "main": "dist-electron/main.js",
   "scripts": {
-    "dev": "concurrently -k \"vite\" \"wait-on http://localhost:5173 && electron .\"",
-    "build": "vite build && tsc -p tsconfig.electron.json",
+    "dev": "vite",
+    "build": "vite build",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build --no-bundle",
+    "dist:portable": "npm run tauri:build && powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-portable.ps1",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "check": "tsc --noEmit && npm run test && npm run build",
-    "dist": "npm run build && electron-builder --win nsis",
-    "dist:portable": "npm run build && powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-portable.ps1"
+    "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml",
+    "check": "npm run typecheck && npm run test && npm run test:rust && npm run build"
   },
   "dependencies": {
+    "@tauri-apps/api": "^2.12.5",
+    "@tauri-apps/plugin-dialog": "^2.8.4",
     "lucide-react": "1.46.0",
-    "meyda": "^5.6.3",
     "react": "19.3.0",
-    "react-dom": "19.3.0",
-    "wavesurfer.js": "7.12.12"
+    "react-dom": "19.3.0"
   },
   "devDependencies": {
-    "@types/node": "latest",
+    "@tauri-apps/cli": "^2.12.6",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.1.1",
-    "concurrently": "latest",
-    "electron": "44.3.0",
-    "electron-builder": "26.15.3",
     "typescript": "7.0.2",
     "vite": "8.3.0",
-    "vitest": "5.0.0",
-    "wait-on": "latest"
-  },
-  "build": {
-    "appId": "studio.seamforge.app",
-    "productName": "SeamForge",
-    "files": [
-      "dist/**/*",
-      "dist-electron/**/*",
-      "package.json"
-    ],
-    "directories": {
-      "output": "release"
-    },
-    "win": {
-      "target": "nsis"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true
-    }
+    "vitest": "5.0.0"
   }
 }

@@ -1,0 +1,193 @@
+import { Sparkles, X } from 'lucide-react'
+import type { LoopCandidate } from '../api/types'
+import { clamp, formatTime } from '../lib/format'
+
+export interface CandidateSidebarProps {
+  candidates: LoopCandidate[]
+  selectedId: number | null
+  analyzing: boolean
+  progress: number
+  progressStage: string
+  bpm: number | null
+  beatsPerBar: number | null
+  hasAudio: boolean
+  onAnalyze: () => void
+  onCancelAnalysis: () => void
+  onSelectCandidate: (candidate: LoopCandidate) => void
+}
+
+function formatBars(bars: number): string {
+  const n = Math.abs(Math.round(bars))
+  const mod100 = n % 100
+  const mod10 = n % 10
+  if (mod100 >= 11 && mod100 <= 14) return `${n} тактов`
+  if (mod10 === 1) return `${n} такт`
+  if (mod10 >= 2 && mod10 <= 4) return `${n} такта`
+  return `${n} тактов`
+}
+
+function toPercent(value: number): number {
+  if (!Number.isFinite(value)) return 0
+  const normalized = value <= 1.001 ? value * 100 : value
+  return Math.round(clamp(normalized, 0, 100))
+}
+
+function confidenceTier(confidence: number): 'is-high' | 'is-mid' | 'is-low' {
+  if (confidence >= 85) return 'is-high'
+  if (confidence >= 65) return 'is-mid'
+  return 'is-low'
+}
+
+export function CandidateSidebar({
+  candidates,
+  selectedId,
+  analyzing,
+  progress,
+  progressStage,
+  bpm,
+  beatsPerBar,
+  hasAudio,
+  onAnalyze,
+  onCancelAnalysis,
+  onSelectCandidate,
+}: CandidateSidebarProps) {
+  const progressPct = Math.round(clamp(progress, 0, 1) * 100)
+
+  return (
+    <section className="panel sidebar-panel" aria-label="Варианты стыков">
+      <div className="panel-header sidebar-header">
+        <h2 className="panel-title">Варианты стыков</h2>
+        {bpm !== null && (
+          <span className="chip chip--accent">
+            {bpm.toFixed(1)} BPM{beatsPerBar ? ` · ${beatsPerBar}/4` : ''}
+          </span>
+        )}
+      </div>
+
+      <div className="sidebar-action">
+        {analyzing ? (
+          <div className="analysis-progress" role="status" aria-live="polite">
+            <div className="analysis-progress-meta">
+              <span className="analysis-progress-stage">
+                {progressStage || 'Анализ аудио…'}
+              </span>
+              <span className="analysis-progress-pct">{progressPct}%</span>
+            </div>
+            <div
+              className="analysis-progress-track"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={progressPct}
+            >
+              <div
+                className="analysis-progress-fill"
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
+            <button
+              type="button"
+              className="btn btn--secondary sidebar-action-btn"
+              onClick={onCancelAnalysis}
+            >
+              <X size={14} strokeWidth={1.85} aria-hidden="true" />
+              <span>Отменить</span>
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="btn btn--primary sidebar-action-btn"
+            onClick={onAnalyze}
+            disabled={!hasAudio}
+          >
+            <Sparkles size={14} strokeWidth={1.85} aria-hidden="true" />
+            <span>Найти лучшие стыки</span>
+          </button>
+        )}
+      </div>
+
+      {candidates.length === 0 ? (
+        <div className="sidebar-empty">
+          <p>
+            {analyzing
+              ? 'Подбираем музыкально согласованные точки бесшовной склейки…'
+              : 'Запустите анализ, чтобы подобрать лучшие точки петли по гармонии, ритму и фазе.'}
+          </p>
+        </div>
+      ) : (
+        <div className="candidate-list" role="list">
+          {candidates.map((candidate, index) => {
+            const isSelected = selectedId === candidate.id
+            const conf = Math.round(clamp(candidate.confidence, 0, 100))
+            const curveLabel =
+              candidate.curve === 'constantGain' ? 'Constant-Gain' : 'Equal-Power'
+
+            const diagRows = isSelected
+              ? [
+                  { label: 'Гармония', value: toPercent(candidate.diagnostics.harmony) },
+                  { label: 'Фраза', value: toPercent(candidate.diagnostics.recurrence) },
+                  { label: 'Ритм', value: toPercent(candidate.diagnostics.rhythm) },
+                  { label: 'Фаза', value: toPercent(candidate.diagnostics.phase) },
+                ]
+              : []
+
+            return (
+              <button
+                key={candidate.id}
+                type="button"
+                role="listitem"
+                className={`candidate-card ${isSelected ? 'is-selected' : ''}`}
+                aria-pressed={isSelected}
+                onClick={() => onSelectCandidate(candidate)}
+              >
+                <div className="candidate-card-top">
+                  <span className="candidate-index">
+                    <kbd className="kbd">{index + 1}</kbd>
+                    <span>Вариант {index + 1}</span>
+                  </span>
+                  <span className={`candidate-confidence ${confidenceTier(conf)}`}>
+                    {conf}%
+                  </span>
+                </div>
+
+                <div className="candidate-card-range">
+                  {formatTime(candidate.start)} → {formatTime(candidate.end)}
+                </div>
+
+                <div className="candidate-card-meta">
+                  {candidate.bars !== null && (
+                    <span>{formatBars(candidate.bars)}</span>
+                  )}
+                  <span>{formatTime(candidate.loopDuration)}</span>
+                </div>
+
+                <div className="candidate-card-tags">
+                  <span className="chip">{Math.round(candidate.crossfadeMs)} мс</span>
+                  <span className="chip">{curveLabel}</span>
+                </div>
+
+                {isSelected && (
+                  <div className="diag-grid" aria-label="Диагностика стыка">
+                    {diagRows.map((row) => (
+                      <div key={row.label} className="diag-row">
+                        <span className="diag-label">{row.label}</span>
+                        <span className="diag-bar" aria-hidden="true">
+                          <span
+                            className="diag-bar-fill"
+                            style={{ width: `${row.value}%` }}
+                          />
+                        </span>
+                        <span className="diag-value">{row.value}%</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </section>
+  )
+}
