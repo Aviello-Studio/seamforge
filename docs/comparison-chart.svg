@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 340" width="920" height="340" role="img" aria-label="SeamForge v2 vs v1 portable footprint and STFT temporal resolution comparison">
+  <defs>
+    <linearGradient id="v1Bar" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#4b5465"/>
+      <stop offset="100%" stop-color="#353c48"/>
+    </linearGradient>
+    <linearGradient id="amberBar" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#e59a3c"/>
+      <stop offset="100%" stop-color="#f2b25c"/>
+    </linearGradient>
+    <linearGradient id="blueBar" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#4e94d4"/>
+      <stop offset="100%" stop-color="#6cb3ee"/>
+    </linearGradient>
+    <style>
+      .sans { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+    </style>
+  </defs>
+
+  <!-- Main studio canvas -->
+  <rect x="0.5" y="0.5" width="919" height="339" rx="14" fill="#121417" stroke="#272b33" stroke-width="1"/>
+
+  <!-- Top header bar -->
+  <g transform="translate(22, 16)">
+    <rect x="0" y="0" width="22" height="22" rx="6" fill="#2a2117" stroke="#e59a3c" stroke-opacity="0.55" stroke-width="1"/>
+    <path d="M4.5 11.5 L7.5 11.5 L9.5 6.5 L12.5 15.5 L14.5 10.5 L17.5 10.5" fill="none" stroke="#e59a3c" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="32" y="15.5" class="sans" font-size="13.5" font-weight="600" fill="#eceff4">SeamForge v2 — Verified Architecture &amp; DSP Metrics</text>
+  </g>
+  <text x="898" y="31.5" text-anchor="end" class="mono" font-size="11" fill="#8b949e">v1 Electron 44 vs v2 Tauri + Rust</text>
+
+  <!-- Left Panel: Portable Footprint -->
+  <rect x="20" y="54" width="432" height="216" rx="10" fill="#191c21" stroke="#272b33" stroke-width="1"/>
+
+  <text x="38" y="80" class="sans" font-size="14" font-weight="600" fill="#eceff4">Portable Footprint (MB)</text>
+  <text x="38" y="96" class="sans" font-size="11" fill="#8b949e">Verified Windows x64 build size — lower is lighter</text>
+
+  <!-- 51x smaller callout pill -->
+  <rect x="338" y="65" width="96" height="24" rx="6" fill="#2a2117" stroke="#e59a3c" stroke-opacity="0.6" stroke-width="1"/>
+  <text x="386" y="81" text-anchor="middle" class="mono" font-size="11.5" font-weight="700" fill="#e59a3c">51× smaller</text>
+
+  <!-- Left Row 1: v1 Electron 350 MB -->
+  <text x="38" y="124" class="sans" font-size="12" fill="#c9d1d9">SeamForge v1 (Electron)</text>
+  <text x="434" y="124" text-anchor="end" class="mono" font-size="12" font-weight="600" fill="#9aa3b2">350 MB</text>
+  <rect x="38" y="131" width="396" height="14" rx="4" fill="#121417" stroke="#232730" stroke-width="1"/>
+  <rect x="38" y="131" width="396" height="14" rx="4" fill="url(#v1Bar)"/>
+
+  <!-- Left Row 2: v2 EXE 6.86 MB (6.86/350 * 396 = 7.76px) -->
+  <text x="38" y="172" class="sans" font-size="12" font-weight="600" fill="#eceff4">SeamForge v2 (Tauri + Rust EXE)</text>
+  <text x="434" y="172" text-anchor="end" class="mono" font-size="12" font-weight="700" fill="#e59a3c">6.86 MB</text>
+  <rect x="38" y="179" width="396" height="14" rx="4" fill="#121417" stroke="#232730" stroke-width="1"/>
+  <rect x="38" y="179" width="8" height="14" rx="3" fill="url(#amberBar)"/>
+  <text x="54" y="190" class="mono" font-size="10.5" fill="#8b949e">single standalone EXE, zero extra DLLs</text>
+
+  <!-- Left Row 3: v2 ZIP 2.86 MB (2.86/350 * 396 = 3.24px) -->
+  <text x="38" y="220" class="sans" font-size="12" font-weight="600" fill="#eceff4">SeamForge v2 (ZIP Archive)</text>
+  <text x="434" y="220" text-anchor="end" class="mono" font-size="12" font-weight="700" fill="#5da3e0">2.86 MB</text>
+  <rect x="38" y="227" width="396" height="14" rx="4" fill="#121417" stroke="#232730" stroke-width="1"/>
+  <rect x="38" y="227" width="4" height="14" rx="2" fill="url(#blueBar)"/>
+  <text x="50" y="238" class="mono" font-size="10.5" fill="#8b949e">portable release archive (SeamForge-portable.zip)</text>
+
+  <text x="38" y="259" class="sans" font-size="10" fill="#6e7681">v1 folder: 246 MB EXE + Chromium/FFmpeg DLLs &amp; locale paks (~350 MB)</text>
+
+  <!-- Right Panel: STFT Temporal Resolution -->
+  <rect x="468" y="54" width="432" height="216" rx="10" fill="#191c21" stroke="#272b33" stroke-width="1"/>
+
+  <text x="486" y="80" class="sans" font-size="14" font-weight="600" fill="#eceff4">STFT Temporal Resolution (ms)</text>
+  <text x="486" y="96" class="sans" font-size="11" fill="#8b949e">Analysis hop at 44.1 kHz — lower is finer</text>
+
+  <!-- 4x finer callout pill -->
+  <rect x="804" y="65" width="78" height="24" rx="6" fill="#162332" stroke="#5da3e0" stroke-opacity="0.6" stroke-width="1"/>
+  <text x="843" y="81" text-anchor="middle" class="mono" font-size="11.5" font-weight="700" fill="#5da3e0">4× finer</text>
+
+  <!-- Right Row 1: v1 JS 46.4 ms -->
+  <text x="486" y="128" class="sans" font-size="12" fill="#c9d1d9">SeamForge v1 (JS / Meyda, hop 2048)</text>
+  <text x="882" y="128" text-anchor="end" class="mono" font-size="12" font-weight="600" fill="#9aa3b2">46.4 ms</text>
+  <rect x="486" y="135" width="396" height="16" rx="4" fill="#121417" stroke="#232730" stroke-width="1"/>
+  <rect x="486" y="135" width="396" height="16" rx="4" fill="url(#v1Bar)"/>
+
+  <!-- Right Row 2: v2 Rust 11.6 ms (11.6/46.4 * 396 = 99px) -->
+  <text x="486" y="179" class="sans" font-size="12" font-weight="600" fill="#eceff4">SeamForge v2 (Rust / rustfft, hop 512)</text>
+  <text x="882" y="179" text-anchor="end" class="mono" font-size="12" font-weight="700" fill="#5da3e0">11.6 ms</text>
+  <rect x="486" y="186" width="396" height="16" rx="4" fill="#121417" stroke="#232730" stroke-width="1"/>
+  <rect x="486" y="186" width="99" height="16" rx="4" fill="url(#blueBar)"/>
+  <text x="594" y="198" class="mono" font-size="10.5" fill="#8b949e">4× finer beat &amp; transient tracking</text>
+
+  <!-- Right Panel DSP Summary Box -->
+  <rect x="486" y="218" width="396" height="38" rx="7" fill="#121417" stroke="#232730" stroke-width="1"/>
+  <line x1="684" y1="226" x2="684" y2="248" stroke="#272b33" stroke-width="1"/>
+  <text x="500" y="233" class="sans" font-size="10" fill="#8b949e">DSP Engine</text>
+  <text x="500" y="248" class="mono" font-size="11" font-weight="600" fill="#eceff4">Rust rustfft + rayon</text>
+  <text x="698" y="233" class="sans" font-size="10" fill="#8b949e">Beat &amp; Phase Alignment</text>
+  <text x="698" y="248" class="mono" font-size="11" font-weight="600" fill="#e59a3c">Ellis DP · ±25 ms stereo</text>
+
+  <!-- Bottom Stat Strip -->
+  <rect x="20" y="284" width="880" height="40" rx="10" fill="#191c21" stroke="#272b33" stroke-width="1"/>
+  <line x1="240" y1="294" x2="240" y2="314" stroke="#272b33" stroke-width="1"/>
+  <line x1="460" y1="294" x2="460" y2="314" stroke="#272b33" stroke-width="1"/>
+  <line x1="680" y1="294" x2="680" y2="314" stroke="#272b33" stroke-width="1"/>
+
+  <!-- Stat 1 -->
+  <text x="130" y="308.5" text-anchor="middle" class="sans" font-size="12" fill="#c9d1d9">
+    <tspan fill="#e59a3c" font-size="13">● </tspan><tspan class="mono" font-size="12.5" font-weight="700" fill="#eceff4">0</tspan><tspan> External DLLs</tspan>
+  </text>
+
+  <!-- Stat 2 -->
+  <text x="350" y="308.5" text-anchor="middle" class="sans" font-size="12" fill="#c9d1d9">
+    <tspan fill="#5da3e0" font-size="13">● </tspan><tspan class="mono" font-size="12.5" font-weight="700" fill="#eceff4">16/24/32-bit</tspan><tspan> WAV</tspan>
+  </text>
+
+  <!-- Stat 3 -->
+  <text x="570" y="308.5" text-anchor="middle" class="sans" font-size="12" fill="#c9d1d9">
+    <tspan fill="#e59a3c" font-size="13">● </tspan><tspan class="mono" font-size="12.5" font-weight="700" fill="#eceff4">10</tspan><tspan> Video Containers</tspan>
+  </text>
+
+  <!-- Stat 4 -->
+  <text x="790" y="308.5" text-anchor="middle" class="sans" font-size="12" fill="#c9d1d9">
+    <tspan fill="#5da3e0" font-size="13">● </tspan><tspan class="mono" font-size="12.5" font-weight="700" fill="#eceff4">6</tspan><tspan> UI Languages</tspan>
+  </text>
+</svg>
