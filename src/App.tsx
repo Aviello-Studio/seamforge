@@ -41,6 +41,7 @@ import { TransportBar } from './components/TransportBar'
 import { TrimModal } from './components/TrimModal'
 import { WaveformCanvas } from './components/WaveformCanvas'
 import { clamp, defaultExportFileName } from './lib/format'
+import { interpolate, useI18n } from './lib/i18n'
 
 type ConfirmAction =
   | { type: 'clear' }
@@ -52,6 +53,7 @@ function fileNameFromPath(path: string): string {
 }
 
 function App() {
+  const { t } = useI18n()
   const [audio, setAudio] = useState<AudioSummary | null>(null)
   const [pendingAudio, setPendingAudio] = useState<AudioSummary | null>(null)
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null)
@@ -129,11 +131,11 @@ function App() {
         }
       } catch (error) {
         if (reqId === seamRequestIdRef.current) {
-          setStatusText(`Ошибка пересчёта стыка: ${String(error)}`)
+          setStatusText(`${t.errorSeamRecalcPrefix}: ${String(error)}`)
         }
       }
     },
-    [],
+    [t],
   )
 
   const scheduleSeamSync = useCallback(
@@ -237,7 +239,7 @@ function App() {
   const openPath = useCallback(
     async (path: string) => {
       if (!isSupportedAudioPath(path)) {
-        setLoadError('Неподдерживаемый формат. Поддерживаются WAV, FLAC, MP3, OGG, M4A, AAC и видео MP4, MOV, MKV, WebM, AVI, WMV.')
+        setLoadError(t.errorUnsupportedFormat)
         return
       }
       if (analyzing) {
@@ -250,32 +252,42 @@ function App() {
       setPlaybackMode('idle')
       setIsLoadingFile(true)
       setLoadError(null)
-      setStatusText(isVideoPath(path) ? 'Извлечение аудиодорожки из видео…' : 'Декодирование аудиофайла…')
+      setStatusText(isVideoPath(path) ? t.statusExtractingVideo : t.statusDecodingAudio)
       try {
         const summary = await loadAudio(path)
         playheadRef.current = 0
         setPendingAudio(summary)
-        setStatusText(`Открыт ${summary.fileName} · выберите фрагмент или используйте целиком`)
+        setStatusText(interpolate(t.statusOpenedHint, { fileName: summary.fileName }))
       } catch (error) {
-        const message = typeof error === 'string' ? error : error instanceof Error ? error.message : 'Не удалось декодировать файл'
+        const message =
+          typeof error === 'string'
+            ? error
+            : error instanceof Error
+              ? error.message
+              : t.errorDecodeFailed
         setLoadError(message)
-        setStatusText(`Ошибка загрузки: ${message}`)
+        setStatusText(`${t.errorLoadPrefix}: ${message}`)
       } finally {
         setIsLoadingFile(false)
       }
     },
-    [analyzing],
+    [analyzing, t],
   )
 
   const handleOpenFile = useCallback(async () => {
     if (isLoadingFile) return
     try {
-      const path = await pickAudioFile()
+      const path = await pickAudioFile({
+        title: t.dialogOpenTitle,
+        allMediaFilter: t.dialogFilterAllMedia,
+        audioFilter: t.dialogFilterAudio,
+        videoFilter: t.dialogFilterVideo,
+      })
       if (path) await openPath(path)
     } catch (error) {
-      setLoadError(`Не удалось открыть диалог: ${String(error)}`)
+      setLoadError(`${t.errorOpenDialogPrefix}: ${String(error)}`)
     }
-  }, [isLoadingFile, openPath])
+  }, [isLoadingFile, openPath, t])
 
   const handleClearProject = useCallback(async () => {
     analysisRunIdRef.current += 1
@@ -305,8 +317,8 @@ function App() {
     setCandidates([])
     setSelectedCandidateId(null)
     setLoadError(null)
-    setStatusText('Готово к работе')
-  }, [])
+    setStatusText(t.statusReady)
+  }, [t])
 
   const handleConfirmAction = useCallback(async () => {
     const action = confirmAction
@@ -332,7 +344,7 @@ function App() {
         const first = paths[0]
         if (!first) return
         if (!isSupportedAudioPath(first)) {
-          const message = 'Неподдерживаемый формат. Поддерживаются WAV, FLAC, MP3, OGG, M4A, AAC и видео MP4, MOV, MKV, WebM, AVI, WMV.'
+          const message = t.errorUnsupportedFormat
           if (!audio) setLoadError(message)
           setStatusText(message)
           return
@@ -355,7 +367,7 @@ function App() {
       active = false
       unlisten?.()
     }
-  }, [audio, isLoadingFile, openPath, pendingAudio])
+  }, [audio, isLoadingFile, openPath, pendingAudio, t])
 
   const handleCancelTrim = useCallback(async () => {
     await pausePlayback().catch(() => undefined)
@@ -363,8 +375,8 @@ function App() {
     setIsPlaying(false)
     setPlaybackMode('idle')
     setPendingAudio(null)
-    setStatusText(audio ? 'Обрезка отменена' : 'Готово к работе')
-  }, [audio])
+    setStatusText(audio ? t.statusTrimCancelled : t.statusReady)
+  }, [audio, t])
 
   const handleConfirmTrim = useCallback(
     async (trimStart: number, trimEnd: number) => {
@@ -389,10 +401,10 @@ function App() {
         setStatusText('')
         await syncSeamNow(0, trimmed.duration, 40, 'constantGain')
       } catch (error) {
-        setStatusText(`Ошибка обрезки: ${String(error)}`)
+        setStatusText(`${t.errorTrimPrefix}: ${String(error)}`)
       }
     },
-    [syncSeamNow],
+    [syncSeamNow, t],
   )
 
   const handleSelectCandidate = useCallback(
@@ -428,8 +440,8 @@ function App() {
     const runId = ++analysisRunIdRef.current
     setAnalyzing(true)
     setProgress(0.02)
-    setProgressStage('Подготовка анализа…')
-    setStatusText('Многопоточный музыкальный анализ…')
+    setProgressStage(t.statusPreparingAnalysis)
+    setStatusText(t.statusAnalyzingAudio)
     try {
       const result = await analyzeLoops()
       if (runId !== analysisRunIdRef.current) return
@@ -449,15 +461,15 @@ function App() {
         loopOffsetRef.current = Math.max(0, playheadRef.current - best.start)
         setStatusText('')
       } else {
-        flashStatus('Подходящие стыки не найдены', 4000)
+        flashStatus(t.statusNoSeamsFound, 4000)
       }
     } catch (error) {
       if (runId === analysisRunIdRef.current) {
         const msg = String(error)
-        if (msg.includes('отменён')) {
-          setStatusText('Анализ отменён')
+        if (msg.includes('отменён') || msg.toLowerCase().includes('cancel')) {
+          setStatusText(t.statusAnalysisCancelled)
         } else {
-          setStatusText(`Ошибка анализа: ${msg}`)
+          setStatusText(`${t.errorAnalysisPrefix}: ${msg}`)
         }
       }
     } finally {
@@ -467,7 +479,7 @@ function App() {
         setProgressStage('')
       }
     }
-  }, [analyzing, audio, syncSeamNow])
+  }, [analyzing, audio, flashStatus, syncSeamNow, t])
 
   const handleCancelAnalysis = useCallback(async () => {
     analysisRunIdRef.current += 1
@@ -475,8 +487,8 @@ function App() {
     setProgress(0)
     setProgressStage('')
     await cancelAnalysis().catch(() => undefined)
-    setStatusText('Анализ отменён')
-  }, [])
+    setStatusText(t.statusAnalysisCancelled)
+  }, [t])
 
   const handleChangeBounds = useCallback(
     (nextStart: number, nextEnd: number) => {
@@ -515,12 +527,12 @@ function App() {
         const snapped = await snapToZeroCrossing(which === 'start' ? start : end, which === 'end')
         if (which === 'start') handleChangeStart(snapped)
         else handleChangeEnd(snapped)
-        flashStatus('Привязано к zero crossing', 2200)
+        flashStatus(t.statusSnappedZeroCrossing, 2200)
       } catch (error) {
-        flashStatus(`Ошибка привязки: ${String(error)}`, 4000)
+        flashStatus(`${t.errorSnapPrefix}: ${String(error)}`, 4000)
       }
     },
-    [audio, end, flashStatus, handleChangeEnd, handleChangeStart, start],
+    [audio, end, flashStatus, handleChangeEnd, handleChangeStart, start, t],
   )
 
   const handleChangeCrossfade = useCallback(
@@ -566,9 +578,9 @@ function App() {
         loopOffsetRef.current = state.loopOffsetSec
       }
     } catch (error) {
-      setStatusText(`Ошибка воспроизведения: ${String(error)}`)
+      setStatusText(`${t.errorPlaybackPrefix}: ${String(error)}`)
     }
-  }, [audio, end, isPlaying, playbackMode, start])
+  }, [audio, end, isPlaying, playbackMode, start, t])
 
   const handleAuditionSeam = useCallback(async () => {
     if (!audio) return
@@ -581,9 +593,9 @@ function App() {
       loopOffsetRef.current = state.loopOffsetSec
       setStatusText('')
     } catch (error) {
-      flashStatus(`Ошибка прослушивания: ${String(error)}`, 4500)
+      flashStatus(`${t.errorAuditionPrefix}: ${String(error)}`, 4500)
     }
-  }, [audio, flashStatus])
+  }, [audio, flashStatus, t])
 
   const handleSeek = useCallback(
     async (timeSec: number) => {
@@ -604,17 +616,20 @@ function App() {
     [audio, end, isPlaying, loopDuration, playbackMode, start],
   )
 
-  const handleTrimPlayPreview = useCallback(async (trimStart: number, trimEnd: number, fromSec?: number) => {
-    try {
-      const state = await playTrimPreview(trimStart, trimEnd, fromSec ?? trimStart)
-      setIsPlaying(state.playing)
-      setPlaybackMode(state.mode)
-      setAudioAvailable(state.audioAvailable)
-      playheadRef.current = state.positionSec
-    } catch (error) {
-      setStatusText(`Ошибка прослушивания: ${String(error)}`)
-    }
-  }, [])
+  const handleTrimPlayPreview = useCallback(
+    async (trimStart: number, trimEnd: number, fromSec?: number) => {
+      try {
+        const state = await playTrimPreview(trimStart, trimEnd, fromSec ?? trimStart)
+        setIsPlaying(state.playing)
+        setPlaybackMode(state.mode)
+        setAudioAvailable(state.audioAvailable)
+        playheadRef.current = state.positionSec
+      } catch (error) {
+        setStatusText(`${t.errorAuditionPrefix}: ${String(error)}`)
+      }
+    },
+    [t],
+  )
 
   const handleTrimPausePreview = useCallback(async () => {
     try {
@@ -631,21 +646,24 @@ function App() {
     if (!audio || exporting) return
     try {
       const suggested = defaultExportFileName(audio.fileName)
-      const outputPath = await pickSaveWavPath(suggested)
+      const outputPath = await pickSaveWavPath(suggested, {
+        title: t.dialogSaveTitle,
+        wavFilter: t.dialogFilterWav,
+      })
       if (!outputPath) {
-        setStatusText('Экспорт отменён')
+        setStatusText(t.statusExportCancelled)
         return
       }
       setExporting(true)
-      setStatusText('Запись WAV в оригинальной частоте…')
+      setStatusText(t.statusExportWriting)
       const saved = await exportWav(outputPath, exportFormat)
-      flashStatus(`Сохранено: ${fileNameFromPath(saved)}`, 4500)
+      flashStatus(interpolate(t.statusExportSaved, { fileName: fileNameFromPath(saved) }), 4500)
     } catch (error) {
-      setStatusText(`Ошибка экспорта: ${String(error)}`)
+      setStatusText(`${t.errorExportPrefix}: ${String(error)}`)
     } finally {
       setExporting(false)
     }
-  }, [audio, exportFormat, exporting])
+  }, [audio, exportFormat, exporting, flashStatus, t])
 
   // Global studio keyboard shortcuts when no modal is open
   useEffect(() => {
@@ -817,21 +835,23 @@ function App() {
       {confirmAction && (
         <ConfirmDialog
           title={
-            confirmAction.type === 'clear'
-              ? 'Очистить текущий проект?'
-              : 'Открыть новый файл?'
+            confirmAction.type === 'clear' ? t.confirmClearTitle : t.confirmReplaceTitle
           }
           description={
             confirmAction.type === 'clear'
-              ? `Файл «${audio?.fileName ?? ''}» и текущие настройки стыка будут сброшены. Вы сможете открыть или перетащить новый файл.`
-              : `Текущий файл «${audio?.fileName ?? pendingAudio?.fileName ?? ''}» будет заменён новым. Несохранённые настройки стыка будут сброшены.`
+              ? interpolate(t.confirmClearDesc, { fileName: audio?.fileName ?? '' })
+              : interpolate(t.confirmReplaceDesc, {
+                  fileName: audio?.fileName ?? pendingAudio?.fileName ?? '',
+                })
           }
           detail={
             confirmAction.type === 'replace'
-              ? `Новый файл: ${confirmAction.fileName}`
+              ? interpolate(t.confirmReplaceDetail, { fileName: confirmAction.fileName })
               : undefined
           }
-          confirmLabel={confirmAction.type === 'clear' ? 'Очистить' : 'Открыть новый файл'}
+          confirmLabel={
+            confirmAction.type === 'clear' ? t.confirmClearAction : t.confirmReplaceAction
+          }
           danger={confirmAction.type === 'clear'}
           onCancel={() => setConfirmAction(null)}
           onConfirm={() => void handleConfirmAction()}
@@ -840,7 +860,7 @@ function App() {
 
       {isDragging && audio && (
         <div className="drop-overlay" aria-hidden="true">
-          <div className="drop-overlay-card">Отпустите аудио или видео, чтобы заменить текущий файл</div>
+          <div className="drop-overlay-card">{t.dropOverlayText}</div>
         </div>
       )}
     </div>

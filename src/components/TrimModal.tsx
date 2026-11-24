@@ -2,7 +2,8 @@ import type React from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Pause, Play, Scissors, Volume1, Volume2, VolumeX, X } from 'lucide-react'
 import type { AudioSummary } from '../api/types'
-import { clamp, formatSampleRate, formatTime, formatTimeDetailed } from '../lib/format'
+import { clamp, formatTime, formatTimeDetailed } from '../lib/format'
+import { formatChannelLabel, formatSampleRateLocalized, useI18n } from '../lib/i18n'
 
 export interface TrimModalProps {
   pending: AudioSummary
@@ -57,6 +58,7 @@ export function TrimModal({
   onCancel,
   onConfirm,
 }: TrimModalProps) {
+  const { locale, t } = useI18n()
   const totalDuration = Math.max(0.001, pending.duration)
   const minGap = Math.min(0.2, totalDuration * 0.5)
 
@@ -416,12 +418,7 @@ export function TrimModal({
   }
 
   const selectionDuration = Math.max(0, trimEnd - trimStart)
-  const channelLabel =
-    pending.channels === 1
-      ? 'Моно'
-      : pending.channels === 2
-        ? 'Стерео'
-        : `${pending.channels} кан.`
+  const channelLabel = formatChannelLabel(pending.channels, locale)
 
   return (
     <div
@@ -442,9 +439,9 @@ export function TrimModal({
               <Scissors size={16} strokeWidth={1.85} />
             </span>
             <div className="trim-header-text">
-              <h2 id="trim-modal-title">Обрезка исходного файла</h2>
+              <h2 id="trim-modal-title">{t.trimTitle}</h2>
               <p title={pending.fileName}>
-                {pending.fileName} · {formatSampleRate(pending.sampleRate)} · {channelLabel} ·{' '}
+                {pending.fileName} · {formatSampleRateLocalized(pending.sampleRate, locale)} · {channelLabel} ·{' '}
                 {formatTime(pending.duration)}
               </p>
             </div>
@@ -454,8 +451,8 @@ export function TrimModal({
             type="button"
             className="btn btn--ghost btn--icon"
             onClick={onCancel}
-            aria-label="Закрыть окно обрезки"
-            title="Закрыть (Esc)"
+            aria-label={t.trimCloseAria}
+            title={t.trimCloseTitle}
           >
             <X size={15} strokeWidth={1.85} aria-hidden="true" />
           </button>
@@ -478,7 +475,7 @@ export function TrimModal({
           <div className="trim-sliders">
             <label className="trim-slider-field">
               <span className="trim-slider-head">
-                <span>Начало фрагмента</span>
+                <span>{t.trimStartLabel}</span>
                 <output>{formatTimeDetailed(trimStart)}</output>
               </span>
               <input
@@ -500,7 +497,7 @@ export function TrimModal({
 
             <label className="trim-slider-field">
               <span className="trim-slider-head">
-                <span>Конец фрагмента</span>
+                <span>{t.trimEndLabel}</span>
                 <output>{formatTimeDetailed(trimEnd)}</output>
               </span>
               <input
@@ -526,7 +523,7 @@ export function TrimModal({
 
         <footer className="trim-footer">
           <div className="trim-duration">
-            <span className="trim-duration-label">Длительность фрагмента</span>
+            <span className="trim-duration-label">{t.trimDurationLabel}</span>
             <strong className="trim-duration-value">
               {formatTime(selectionDuration)}{' '}
               <span className="trim-duration-total">/ {formatTime(pending.duration)}</span>
@@ -534,13 +531,13 @@ export function TrimModal({
           </div>
 
           <div className="trim-footer-actions">
-            <div className="trim-volume" aria-label="Громкость предпрослушивания">
+            <div className="trim-volume" aria-label={t.trimVolumeAria}>
               <button
                 type="button"
                 className={`btn btn--ghost btn--icon transport-volume-btn ${muted || volume === 0 ? 'is-muted' : ''}`}
                 onClick={onToggleMute}
-                aria-label={muted || volume === 0 ? 'Включить звук' : 'Выключить звук'}
-                title={muted || volume === 0 ? 'Включить звук (M)' : 'Выключить звук (M)'}
+                aria-label={muted || volume === 0 ? t.transportUnmuteAria : t.transportMuteAria}
+                title={muted || volume === 0 ? t.transportUnmuteTitle : t.transportMuteTitle}
               >
                 {muted || volume <= 0.001 ? (
                   <VolumeX size={15} strokeWidth={1.85} aria-hidden="true" />
@@ -557,7 +554,7 @@ export function TrimModal({
                 max={1}
                 step={0.01}
                 value={muted ? 0 : volume}
-                aria-label="Громкость предпрослушивания"
+                aria-label={t.trimVolumeAria}
                 onChange={(event) => onChangeVolume(Number(event.target.value))}
               />
               <span className="transport-volume-value">
@@ -583,7 +580,7 @@ export function TrimModal({
               ) : (
                 <Play size={14} strokeWidth={2} aria-hidden="true" />
               )}
-              <span>{isPlaying ? 'Стоп' : 'Прослушать'}</span>
+              <span>{isPlaying ? t.trimStop : t.trimPlay}</span>
               <kbd className="kbd">Space</kbd>
             </button>
 
@@ -592,7 +589,7 @@ export function TrimModal({
               className="btn btn--ghost"
               onClick={() => onConfirm(0, pending.duration)}
             >
-              Использовать целиком
+              {t.trimUseFull}
             </button>
 
             <button
@@ -600,7 +597,7 @@ export function TrimModal({
               className="btn btn--primary"
               onClick={() => onConfirm(trimStart, trimEnd)}
             >
-              Применить обрезку
+              {t.trimApply}
             </button>
           </div>
         </footer>

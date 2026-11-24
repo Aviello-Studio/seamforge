@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { AlertTriangle, X } from 'lucide-react'
+import { useI18n } from '../lib/i18n'
 
 export interface ConfirmDialogProps {
   title: string
@@ -17,12 +18,14 @@ export function ConfirmDialog({
   description,
   detail,
   confirmLabel,
-  cancelLabel = 'Отмена',
+  cancelLabel,
   danger = false,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const { t } = useI18n()
   const confirmButtonRef = useRef<HTMLButtonElement | null>(null)
+  const resolvedCancelLabel = cancelLabel ?? t.confirmCancelDefault
 
   useEffect(() => {
     confirmButtonRef.current?.focus()
@@ -70,7 +73,7 @@ export function ConfirmDialog({
             type="button"
             className="btn btn--ghost btn--icon"
             onClick={onCancel}
-            aria-label="Закрыть"
+            aria-label={t.confirmCloseAria}
           >
             <X size={15} strokeWidth={1.85} aria-hidden="true" />
           </button>
@@ -85,7 +88,7 @@ export function ConfirmDialog({
 
         <footer className="confirm-footer">
           <button type="button" className="btn btn--secondary" onClick={onCancel}>
-            {cancelLabel}
+            {resolvedCancelLabel}
           </button>
           <button
             ref={confirmButtonRef}

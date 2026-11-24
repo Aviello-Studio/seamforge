@@ -31,26 +31,41 @@ export function isVideoPath(path: string): boolean {
   return VIDEO_EXTENSIONS.some((ext) => lower.endsWith(`.${ext}`))
 }
 
-export async function pickAudioFile(): Promise<string | null> {
+export interface PickAudioFileLabels {
+  title?: string
+  allMediaFilter?: string
+  audioFilter?: string
+  videoFilter?: string
+}
+
+export interface PickSaveWavLabels {
+  title?: string
+  wavFilter?: string
+}
+
+export async function pickAudioFile(labels?: PickAudioFileLabels): Promise<string | null> {
   if (!isTauriRuntime()) return null
   const result = await open({
     multiple: false,
-    title: 'Открыть аудио или видеофайл',
+    title: labels?.title ?? 'Open audio or video file',
     filters: [
-      { name: 'Аудио и видео', extensions: MEDIA_EXTENSIONS },
-      { name: 'Аудиофайлы', extensions: AUDIO_EXTENSIONS },
-      { name: 'Видеофайлы (извлечь аудио)', extensions: VIDEO_EXTENSIONS },
+      { name: labels?.allMediaFilter ?? 'Audio & Video', extensions: MEDIA_EXTENSIONS },
+      { name: labels?.audioFilter ?? 'Audio files', extensions: AUDIO_EXTENSIONS },
+      { name: labels?.videoFilter ?? 'Video files (extract audio)', extensions: VIDEO_EXTENSIONS },
     ],
   })
   return typeof result === 'string' ? result : null
 }
 
-export async function pickSaveWavPath(defaultName: string): Promise<string | null> {
+export async function pickSaveWavPath(
+  defaultName: string,
+  labels?: PickSaveWavLabels,
+): Promise<string | null> {
   if (!isTauriRuntime()) return null
   return save({
-    title: 'Экспорт бесшовной петли WAV',
+    title: labels?.title ?? 'Export seamless WAV loop',
     defaultPath: defaultName,
-    filters: [{ name: 'WAV Audio', extensions: ['wav'] }],
+    filters: [{ name: labels?.wavFilter ?? 'WAV Audio', extensions: ['wav'] }],
   })
 }
 

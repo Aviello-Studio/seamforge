@@ -2,6 +2,7 @@ import type React from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Crosshair, Grid3x3, Maximize2, ZoomIn, ZoomOut } from 'lucide-react'
 import { clamp, formatTime } from '../lib/format'
+import { useI18n } from '../lib/i18n'
 
 export interface WaveformCanvasProps {
   peaks: [number, number][]
@@ -76,6 +77,7 @@ export function WaveformCanvas({
   onSeek,
   onToggleBeats,
 }: WaveformCanvasProps) {
+  const { t } = useI18n()
   const stageRef = useRef<HTMLDivElement | null>(null)
   const baseCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -705,21 +707,21 @@ export function WaveformCanvas({
   const loopWidthPct = clamp(((end - start) / safeDuration) * 100, 0.5, 100)
 
   return (
-    <section className="panel waveform-panel" aria-label="Волновая форма и границы петли">
+    <section className="panel waveform-panel" aria-label={t.waveformRegionAria}>
       <div className="panel-header waveform-toolbar">
         <div className="waveform-toolbar-group">
-          <div className="waveform-zoom-group" role="group" aria-label="Масштаб волновой формы">
+          <div className="waveform-zoom-group" role="group" aria-label={t.waveformZoomGroupAria}>
             <button
               type="button"
               className="btn btn--ghost btn--icon"
               onClick={() => applyZoom(zoom / 1.5)}
               disabled={zoom <= MIN_ZOOM}
-              aria-label="Уменьшить масштаб"
-              title="Уменьшить масштаб"
+              aria-label={t.waveformZoomOut}
+              title={t.waveformZoomOut}
             >
               <ZoomOut size={14} strokeWidth={1.85} aria-hidden="true" />
             </button>
-            <span className="waveform-zoom-badge" aria-label="Текущий масштаб">
+            <span className="waveform-zoom-badge" aria-label={t.waveformZoomCurrentAria}>
               {zoom.toFixed(1)}×
             </span>
             <button
@@ -727,8 +729,8 @@ export function WaveformCanvas({
               className="btn btn--ghost btn--icon"
               onClick={() => applyZoom(zoom * 1.5)}
               disabled={zoom >= MAX_ZOOM}
-              aria-label="Увеличить масштаб"
-              title="Увеличить масштаб"
+              aria-label={t.waveformZoomIn}
+              title={t.waveformZoomIn}
             >
               <ZoomIn size={14} strokeWidth={1.85} aria-hidden="true" />
             </button>
@@ -742,10 +744,10 @@ export function WaveformCanvas({
               setViewStart(0)
             }}
             disabled={zoom <= MIN_ZOOM}
-            title="Показать весь трек"
+            title={t.waveformFitTrackTitle}
           >
             <Maximize2 size={13} strokeWidth={1.85} aria-hidden="true" />
-            <span>Весь трек</span>
+            <span>{t.waveformFitTrack}</span>
           </button>
 
           <button
@@ -753,10 +755,10 @@ export function WaveformCanvas({
             className="btn btn--ghost"
             onClick={handleZoomToSeam}
             disabled={duration <= 0}
-            title="Приблизить область стыка"
+            title={t.waveformToSeamTitle}
           >
             <Crosshair size={13} strokeWidth={1.85} aria-hidden="true" />
-            <span>К стыку</span>
+            <span>{t.waveformToSeam}</span>
           </button>
         </div>
 
@@ -769,12 +771,12 @@ export function WaveformCanvas({
             aria-pressed={showBeats && beatTimes.length > 0}
             title={
               beatTimes.length === 0
-                ? 'Сетка долей появится после анализа'
-                : 'Показать или скрыть сетку долей'
+                ? t.waveformBeatsDisabledTitle
+                : t.waveformBeatsToggleTitle
             }
           >
             <Grid3x3 size={13} strokeWidth={1.85} aria-hidden="true" />
-            <span>Доли</span>
+            <span>{t.waveformBeats}</span>
           </button>
         </div>
       </div>
@@ -798,7 +800,7 @@ export function WaveformCanvas({
             ref={panbarRef}
             className="waveform-panbar"
             role="scrollbar"
-            aria-label="Навигация по волновой форме"
+            aria-label={t.waveformPanbarAria}
             aria-orientation="horizontal"
             aria-valuemin={0}
             aria-valuemax={100}

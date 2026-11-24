@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react'
 import { Download, Loader2, Pause, Play, Repeat, Volume1, Volume2, VolumeX } from 'lucide-react'
 import type { WavFormat } from '../api/types'
 import { clamp, formatTime } from '../lib/format'
+import { useI18n } from '../lib/i18n'
 
 export interface TransportBarProps {
   isPlaying: boolean
@@ -49,6 +50,7 @@ export function TransportBar({
   onChangeExportFormat,
   onExport,
 }: TransportBarProps) {
+  const { t } = useI18n()
   const currentTimeElRef = useRef<HTMLSpanElement | null>(null)
   const scrubberInputRef = useRef<HTMLInputElement | null>(null)
   const isScrubbingRef = useRef(false)
@@ -101,21 +103,21 @@ export function TransportBar({
   const initialRel = clamp(loopOffsetRef.current, 0, Math.max(0, loopDuration))
 
   return (
-    <footer className="transport-bar" aria-label="Транспорт и экспорт">
+    <footer className="transport-bar" aria-label={t.transportRegionAria}>
       <div className="transport-controls">
         <button
           type="button"
           className={`btn btn--secondary transport-play-btn ${isPlaying ? 'is-playing' : ''}`}
           onClick={onTogglePlay}
           disabled={disabled || !audioAvailable}
-          title={!audioAvailable ? 'Аудиоустройство вывода недоступно' : 'Воспроизведение / пауза (Space)'}
+          title={!audioAvailable ? t.transportAudioUnavailable : t.transportPlayTitle}
         >
           {isPlaying ? (
             <Pause size={14} strokeWidth={2} aria-hidden="true" />
           ) : (
             <Play size={14} strokeWidth={2} aria-hidden="true" />
           )}
-          <span>{isPlaying ? 'Пауза' : 'Играть'}</span>
+          <span>{isPlaying ? t.transportPause : t.transportPlay}</span>
           <kbd className="kbd">Space</kbd>
         </button>
 
@@ -124,14 +126,14 @@ export function TransportBar({
           className="btn btn--ghost transport-seam-btn"
           onClick={onAuditionSeam}
           disabled={disabled || !audioAvailable}
-          title="Прослушать переход за 2.5 секунды до стыка (S)"
+          title={t.transportSeamTitle}
         >
           <Repeat size={14} strokeWidth={1.85} aria-hidden="true" />
-          <span>Стык</span>
+          <span>{t.transportSeam}</span>
           <kbd className="kbd">S</kbd>
         </button>
 
-        <div className="transport-time" aria-label="Позиция в петле">
+        <div className="transport-time" aria-label={t.transportLoopPositionAria}>
           <span ref={currentTimeElRef} className="transport-time-current">
             {formatTime(initialRel)}
           </span>
@@ -152,7 +154,7 @@ export function TransportBar({
           step={0.01}
           defaultValue={initialPos.toFixed(3)}
           disabled={disabled}
-          aria-label="Позиция воспроизведения"
+          aria-label={t.transportPlaybackPositionAria}
           onPointerDown={() => {
             isScrubbingRef.current = true
           }}
@@ -175,8 +177,8 @@ export function TransportBar({
           }}
         />
         {!audioAvailable ? (
-          <div className="transport-status is-warning" title="Аудиоустройство вывода недоступно">
-            Аудиоустройство вывода недоступно
+          <div className="transport-status is-warning" title={t.transportAudioUnavailable}>
+            {t.transportAudioUnavailable}
           </div>
         ) : statusText ? (
           <div className="transport-status" title={statusText}>
@@ -185,14 +187,14 @@ export function TransportBar({
         ) : null}
       </div>
 
-      <div className="transport-volume" aria-label="Громкость мониторинга">
+      <div className="transport-volume" aria-label={t.transportVolumeRegionAria}>
         <button
           type="button"
           className={`btn btn--ghost btn--icon transport-volume-btn ${muted || volume === 0 ? 'is-muted' : ''}`}
           onClick={onToggleMute}
           disabled={!audioAvailable}
-          aria-label={muted || volume === 0 ? 'Включить звук' : 'Выключить звук'}
-          title={muted || volume === 0 ? 'Включить звук (M)' : 'Выключить звук (M)'}
+          aria-label={muted || volume === 0 ? t.transportUnmuteAria : t.transportMuteAria}
+          title={muted || volume === 0 ? t.transportUnmuteTitle : t.transportMuteTitle}
         >
           {muted || volume <= 0.001 ? (
             <VolumeX size={15} strokeWidth={1.85} aria-hidden="true" />
@@ -210,8 +212,8 @@ export function TransportBar({
           step={0.01}
           value={muted ? 0 : volume}
           disabled={!audioAvailable}
-          aria-label="Громкость воспроизведения"
-          title="Громкость мониторинга (не влияет на экспорт WAV)"
+          aria-label={t.transportVolumeSliderAria}
+          title={t.transportVolumeSliderTitle}
           onChange={(event) => onChangeVolume(Number(event.target.value))}
         />
         <span className="transport-volume-value">{Math.round((muted ? 0 : volume) * 100)}%</span>
@@ -220,14 +222,14 @@ export function TransportBar({
       <div className="transport-export">
         <select
           className="transport-select"
-          aria-label="Формат WAV"
+          aria-label={t.transportWavFormatAria}
           value={exportFormat}
           disabled={disabled || exporting}
           onChange={(event) => onChangeExportFormat(event.target.value as WavFormat)}
         >
-          <option value="pcm16">WAV 16-bit</option>
-          <option value="pcm24">WAV 24-bit</option>
-          <option value="float32">WAV 32-bit float</option>
+          <option value="pcm16">{t.transportWav16}</option>
+          <option value="pcm24">{t.transportWav24}</option>
+          <option value="float32">{t.transportWav32}</option>
         </select>
 
         <button
@@ -235,14 +237,14 @@ export function TransportBar({
           className="btn btn--primary transport-export-btn"
           onClick={onExport}
           disabled={disabled || exporting}
-          title="Экспортировать бесшовную петлю WAV (Ctrl+S)"
+          title={t.transportExportTitle}
         >
           {exporting ? (
             <Loader2 size={14} strokeWidth={2} className="is-spinning" aria-hidden="true" />
           ) : (
             <Download size={14} strokeWidth={2} aria-hidden="true" />
           )}
-          <span>{exporting ? 'Экспорт…' : 'Экспорт WAV'}</span>
+          <span>{exporting ? t.transportExporting : t.transportExport}</span>
         </button>
       </div>
     </footer>

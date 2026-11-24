@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Magnet } from 'lucide-react'
 import type { CrossfadeCurve, SeamPreviewData } from '../api/types'
 import { clamp, formatTimeDetailed } from '../lib/format'
+import { useI18n } from '../lib/i18n'
 
 export interface SeamInspectorProps {
   preview: SeamPreviewData | null
@@ -82,6 +83,7 @@ export function SeamInspector({
   onChangeCrossfade,
   onChangeCurve,
 }: SeamInspectorProps) {
+  const { t } = useI18n()
   const scopeWrapRef = useRef<HTMLDivElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [size, setSize] = useState({ width: 0, height: 0 })
@@ -193,32 +195,32 @@ export function SeamInspector({
   const continuityMetric = preview ? formatContinuityPercent(preview.seamContinuity) : null
 
   return (
-    <section className="panel seam-panel" aria-label="Инспектор стыка">
+    <section className="panel seam-panel" aria-label={t.seamRegionAria}>
       <div className="panel-header">
         <div className="seam-header-left">
-          <h2 className="panel-title">Стык</h2>
-          <div className="seam-scope-legend" aria-label="Легенда осциллограммы">
+          <h2 className="panel-title">{t.seamTitle}</h2>
+          <div className="seam-scope-legend" aria-label={t.seamLegendAria}>
             <span className="seam-legend-item">
               <i className="seam-swatch seam-swatch--tail" aria-hidden="true" />
-              Конец
+              {t.seamLegendTail}
             </span>
             <span className="seam-legend-item">
               <i className="seam-swatch seam-swatch--head" aria-hidden="true" />
-              Начало
+              {t.seamLegendHead}
             </span>
             <span className="seam-legend-item">
               <i className="seam-swatch seam-swatch--blended" aria-hidden="true" />
-              Склейка
+              {t.seamLegendBlended}
             </span>
           </div>
         </div>
         <div className="seam-metrics">
           <span className={`seam-metric ${phaseMetric?.tone ?? ''}`}>
-            <span>Фаза</span>
+            <span>{t.seamMetricPhase}</span>
             <strong>{phaseMetric ? phaseMetric.label : '—'}</strong>
           </span>
           <span className={`seam-metric ${continuityMetric?.tone ?? ''}`}>
-            <span>Гладкость</span>
+            <span>{t.seamMetricSmoothness}</span>
             <strong>{continuityMetric ? continuityMetric.label : '—'}</strong>
           </span>
         </div>
@@ -230,7 +232,7 @@ export function SeamInspector({
             <canvas
               ref={canvasRef}
               className="seam-scope-canvas"
-              aria-label="Осциллограмма совмещения конца и начала петли"
+              aria-label={t.seamScopeAria}
             />
           </div>
         </div>
@@ -241,18 +243,18 @@ export function SeamInspector({
               <div className="boundary-row-head">
                 <span className="boundary-label">
                   <i className="boundary-dot boundary-dot--head" aria-hidden="true" />
-                  Начало
+                  {t.seamStart}
                 </span>
                 <output className="boundary-value">{formatTimeDetailed(start)}</output>
               </div>
-              <div className="nudge-group" role="group" aria-label="Точная подстройка начала">
+              <div className="nudge-group" role="group" aria-label={t.seamNudgeStartAria}>
                 {NUDGE_STEPS_MS.map((step) => (
                   <button
                     key={step}
                     type="button"
                     className="nudge-btn"
                     disabled={disabled}
-                    title={`${step > 0 ? `+${step}` : step} мс`}
+                    title={`${step > 0 ? `+${step}` : step} ${t.unitMs}`}
                     onClick={() => onChangeStart(clamp(start + step / 1000, 0, Math.max(0, end - 0.1)))}
                   >
                     {step > 0 ? `+${step}` : step}
@@ -262,8 +264,8 @@ export function SeamInspector({
                   type="button"
                   className="btn btn--secondary btn--icon nudge-snap-btn"
                   disabled={disabled}
-                  title="Привязать к zero crossing"
-                  aria-label="Привязать начало к zero crossing"
+                  title={t.seamSnapTitle}
+                  aria-label={t.seamSnapStartAria}
                   onClick={() => onSnapBoundary('start')}
                 >
                   <Magnet size={13} strokeWidth={1.85} aria-hidden="true" />
@@ -275,18 +277,18 @@ export function SeamInspector({
               <div className="boundary-row-head">
                 <span className="boundary-label">
                   <i className="boundary-dot boundary-dot--tail" aria-hidden="true" />
-                  Конец
+                  {t.seamEnd}
                 </span>
                 <output className="boundary-value">{formatTimeDetailed(end)}</output>
               </div>
-              <div className="nudge-group" role="group" aria-label="Точная подстройка конца">
+              <div className="nudge-group" role="group" aria-label={t.seamNudgeEndAria}>
                 {NUDGE_STEPS_MS.map((step) => (
                   <button
                     key={step}
                     type="button"
                     className="nudge-btn"
                     disabled={disabled}
-                    title={`${step > 0 ? `+${step}` : step} мс`}
+                    title={`${step > 0 ? `+${step}` : step} ${t.unitMs}`}
                     onClick={() => onChangeEnd(clamp(end + step / 1000, start + 0.1, duration))}
                   >
                     {step > 0 ? `+${step}` : step}
@@ -296,8 +298,8 @@ export function SeamInspector({
                   type="button"
                   className="btn btn--secondary btn--icon nudge-snap-btn"
                   disabled={disabled}
-                  title="Привязать к zero crossing"
-                  aria-label="Привязать конец к zero crossing"
+                  title={t.seamSnapTitle}
+                  aria-label={t.seamSnapEndAria}
                   onClick={() => onSnapBoundary('end')}
                 >
                   <Magnet size={13} strokeWidth={1.85} aria-hidden="true" />
@@ -312,10 +314,10 @@ export function SeamInspector({
             <div className="seam-slider-row">
               <div className="boundary-row-head">
                 <label htmlFor="seam-crossfade-slider" className="boundary-label">
-                  Crossfade
+                  {t.seamCrossfade}
                 </label>
                 <output htmlFor="seam-crossfade-slider" className="boundary-value">
-                  {clampedCrossfade} мс
+                  {clampedCrossfade} {t.unitMs}
                 </output>
               </div>
               <input
@@ -332,14 +334,14 @@ export function SeamInspector({
             </div>
 
             <div className="seam-curve-row">
-              <span className="boundary-label">Кривая</span>
-              <div className="curve-toggle" role="group" aria-label="Кривая кроссфейда">
+              <span className="boundary-label">{t.seamCurve}</span>
+              <div className="curve-toggle" role="group" aria-label={t.seamCurveGroupAria}>
                 <button
                   type="button"
                   className={`curve-toggle-btn ${curve === 'constantGain' ? 'is-active' : ''}`}
                   aria-pressed={curve === 'constantGain'}
                   disabled={disabled}
-                  title="Для фазово-согласованных петель"
+                  title={t.seamCurveConstantGainTitle}
                   onClick={() => onChangeCurve('constantGain')}
                 >
                   Constant-Gain
@@ -349,7 +351,7 @@ export function SeamInspector({
                   className={`curve-toggle-btn ${curve === 'equalPower' ? 'is-active' : ''}`}
                   aria-pressed={curve === 'equalPower'}
                   disabled={disabled}
-                  title="Для пэдов и эмбиента"
+                  title={t.seamCurveEqualPowerTitle}
                   onClick={() => onChangeCurve('equalPower')}
                 >
                   Equal-Power

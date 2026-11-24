@@ -1,6 +1,7 @@
 import { Sparkles, X } from 'lucide-react'
 import type { LoopCandidate } from '../api/types'
 import { clamp, formatTime } from '../lib/format'
+import { formatBarsLocalized, translateAnalysisStage, useI18n } from '../lib/i18n'
 
 export interface CandidateSidebarProps {
   candidates: LoopCandidate[]
@@ -14,16 +15,6 @@ export interface CandidateSidebarProps {
   onAnalyze: () => void
   onCancelAnalysis: () => void
   onSelectCandidate: (candidate: LoopCandidate) => void
-}
-
-function formatBars(bars: number): string {
-  const n = Math.abs(Math.round(bars))
-  const mod100 = n % 100
-  const mod10 = n % 10
-  if (mod100 >= 11 && mod100 <= 14) return `${n} тактов`
-  if (mod10 === 1) return `${n} такт`
-  if (mod10 >= 2 && mod10 <= 4) return `${n} такта`
-  return `${n} тактов`
 }
 
 function toPercent(value: number): number {
@@ -51,12 +42,14 @@ export function CandidateSidebar({
   onCancelAnalysis,
   onSelectCandidate,
 }: CandidateSidebarProps) {
+  const { locale, t } = useI18n()
   const progressPct = Math.round(clamp(progress, 0, 1) * 100)
+  const translatedStage = translateAnalysisStage(progressStage, t) || t.sidebarAnalyzingFallback
 
   return (
-    <section className="panel sidebar-panel" aria-label="Варианты стыков">
+    <section className="panel sidebar-panel" aria-label={t.sidebarRegionAria}>
       <div className="panel-header sidebar-header">
-        <h2 className="panel-title">Стыки</h2>
+        <h2 className="panel-title">{t.sidebarTitle}</h2>
         {bpm !== null && (
           <span className="chip chip--accent">
             {bpm.toFixed(1)} BPM{beatsPerBar ? ` · ${beatsPerBar}/4` : ''}
@@ -68,9 +61,7 @@ export function CandidateSidebar({
         {analyzing ? (
           <div className="analysis-progress" role="status" aria-live="polite">
             <div className="analysis-progress-meta">
-              <span className="analysis-progress-stage">
-                {progressStage || 'Анализ…'}
-              </span>
+              <span className="analysis-progress-stage">{translatedStage}</span>
               <span className="analysis-progress-pct">{progressPct}%</span>
             </div>
             <div
@@ -91,7 +82,7 @@ export function CandidateSidebar({
               onClick={onCancelAnalysis}
             >
               <X size={14} strokeWidth={1.85} aria-hidden="true" />
-              <span>Отменить</span>
+              <span>{t.sidebarCancel}</span>
             </button>
           </div>
         ) : (
@@ -102,18 +93,14 @@ export function CandidateSidebar({
             disabled={!hasAudio}
           >
             <Sparkles size={14} strokeWidth={1.85} aria-hidden="true" />
-            <span>Найти стыки</span>
+            <span>{t.sidebarFindSeams}</span>
           </button>
         )}
       </div>
 
       {candidates.length === 0 ? (
         <div className="sidebar-empty">
-          <p>
-            {analyzing
-              ? 'Подбор музыкальных точек петли…'
-              : 'Нажмите «Найти стыки» для автоподбора петли.'}
-          </p>
+          <p>{analyzing ? t.sidebarEmptyAnalyzing : t.sidebarEmptyIdle}</p>
         </div>
       ) : (
         <div className="candidate-list" role="list">
@@ -126,10 +113,10 @@ export function CandidateSidebar({
 
             const diagRows = isSelected
               ? [
-                  { label: 'Гармония', value: toPercent(candidate.diagnostics.harmony) },
-                  { label: 'Фраза', value: toPercent(candidate.diagnostics.recurrence) },
-                  { label: 'Ритм', value: toPercent(candidate.diagnostics.rhythm) },
-                  { label: 'Фаза', value: toPercent(candidate.diagnostics.phase) },
+                  { label: t.sidebarDiagHarmony, value: toPercent(candidate.diagnostics.harmony) },
+                  { label: t.sidebarDiagPhrase, value: toPercent(candidate.diagnostics.recurrence) },
+                  { label: t.sidebarDiagRhythm, value: toPercent(candidate.diagnostics.rhythm) },
+                  { label: t.sidebarDiagPhase, value: toPercent(candidate.diagnostics.phase) },
                 ]
               : []
 
@@ -156,16 +143,16 @@ export function CandidateSidebar({
 
                 <div className="candidate-card-meta">
                   <span>
-                    {candidate.bars !== null ? `${formatBars(candidate.bars)} · ` : ''}
+                    {candidate.bars !== null ? `${formatBarsLocalized(candidate.bars, locale)} · ` : ''}
                     {formatTime(candidate.loopDuration)}
                   </span>
                   <span className="candidate-card-fade" title={curveTitle}>
-                    {Math.round(candidate.crossfadeMs)} мс · {curveShort}
+                    {Math.round(candidate.crossfadeMs)} {t.unitMs} · {curveShort}
                   </span>
                 </div>
 
                 {isSelected && (
-                  <div className="diag-grid" aria-label="Диагностика стыка">
+                  <div className="diag-grid" aria-label={t.sidebarDiagAria}>
                     {diagRows.map((row) => (
                       <div key={row.label} className="diag-row">
                         <div className="diag-row-head">
