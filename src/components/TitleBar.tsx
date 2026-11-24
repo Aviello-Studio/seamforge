@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Copy, FolderOpen, Globe, Minus, Square, Trash2, X } from 'lucide-react'
+import appIcon from '../assets/app-icon.png'
 import {
   closeWindow,
   isWindowMaximized,
@@ -60,32 +61,15 @@ export function TitleBar({
   return (
     <header className="titlebar" data-tauri-drag-region>
       <div className="titlebar-brand" data-tauri-drag-region>
-        <svg
+        <img
+          src={appIcon}
+          alt=""
           className="titlebar-emblem"
-          width="18"
-          height="18"
-          viewBox="0 0 18 18"
-          fill="none"
+          width={20}
+          height={20}
+          draggable={false}
           aria-hidden="true"
-        >
-          <rect
-            x="1.25"
-            y="1.25"
-            width="15.5"
-            height="15.5"
-            rx="4"
-            stroke="#363c47"
-            strokeWidth="1.25"
-            fill="#121417"
-          />
-          <path
-            d="M4.2 10.6C5.2 6.8 6.8 5.2 9 9C11.2 12.8 12.8 11.2 13.8 7.4"
-            stroke="#e59a3c"
-            strokeWidth="1.75"
-            strokeLinecap="round"
-          />
-          <circle cx="9" cy="9" r="1.4" fill="#eceff4" />
-        </svg>
+        />
         <span className="titlebar-wordmark" data-tauri-drag-region>
           SeamForge
         </span>

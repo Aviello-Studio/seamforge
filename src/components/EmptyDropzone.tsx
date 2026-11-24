@@ -1,4 +1,5 @@
-import { AlertCircle, AudioWaveform, FolderOpen, Loader2, Upload } from 'lucide-react'
+import { AlertCircle, FolderOpen, Loader2, Upload } from 'lucide-react'
+import appIcon from '../assets/app-icon.png'
 import { useI18n } from '../lib/i18n'
 
 export interface EmptyDropzoneProps {
@@ -22,13 +23,23 @@ export function EmptyDropzone({
       aria-label={t.emptyRegionAria}
     >
       <div className="empty-card">
-        <div className="empty-icon" aria-hidden="true">
+        <div
+          className={`empty-icon ${!isLoading && !isDragging ? 'empty-icon--brand' : ''}`}
+          aria-hidden="true"
+        >
           {isLoading ? (
             <Loader2 size={26} strokeWidth={1.75} className="is-spinning" />
           ) : isDragging ? (
             <Upload size={26} strokeWidth={1.75} />
           ) : (
-            <AudioWaveform size={26} strokeWidth={1.75} />
+            <img
+              src={appIcon}
+              alt=""
+              className="empty-brand-icon"
+              width={56}
+              height={56}
+              draggable={false}
+            />
           )}
         </div>
 
