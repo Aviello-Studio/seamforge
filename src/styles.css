@@ -606,16 +606,8 @@ select:focus-visible {
 .waveform-toolbar-group {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
-}
-
-.waveform-span-readout {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-  color: var(--text-secondary);
-  white-space: nowrap;
 }
 
 .waveform-toolbar-controls {
@@ -984,11 +976,6 @@ select:focus-visible {
 .curve-toggle-btn.is-active {
   background: var(--bg-elevated);
   color: var(--accent);
-}
-
-.seam-curve-hint {
-  font-size: 11px;
-  color: var(--text-muted);
 }
 
 /* ==========================================================================
@@ -1370,7 +1357,7 @@ select:focus-visible {
 }
 
 .trim-modal {
-  width: min(820px, 100%);
+  width: min(880px, 100%);
   max-height: calc(100vh - 48px);
   display: flex;
   flex-direction: column;
@@ -1538,6 +1525,20 @@ select:focus-visible {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+}
+
+.trim-volume {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding-right: 8px;
+  margin-right: 2px;
+  border-right: 1px solid var(--border-subtle);
+}
+
+.trim-volume-slider {
+  width: 72px;
 }
 
 .confirm-modal {

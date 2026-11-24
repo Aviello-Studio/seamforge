@@ -3,8 +3,13 @@
   "version": "2.0.0",
   "private": true,
   "description": "Precision desktop studio for seamless musical audio loops.",
-  "author": "SeamForge",
+  "author": "NIGATAulxgenii",
   "license": "MIT",
+  "homepage": "https://github.com/NIGATAulxgenii/seamforge",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NIGATAulxgenii/seamforge.git"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",

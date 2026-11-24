@@ -1,6 +1,6 @@
 import type React from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Pause, Play, Scissors, X } from 'lucide-react'
+import { Pause, Play, Scissors, Volume1, Volume2, VolumeX, X } from 'lucide-react'
 import type { AudioSummary } from '../api/types'
 import { clamp, formatSampleRate, formatTime, formatTimeDetailed } from '../lib/format'
 
@@ -8,6 +8,10 @@ export interface TrimModalProps {
   pending: AudioSummary
   isPlaying: boolean
   playheadRef: React.MutableRefObject<number>
+  volume: number
+  muted: boolean
+  onChangeVolume: (volume: number) => void
+  onToggleMute: () => void
   onPlayPreview: (startSec: number, endSec: number, fromSec?: number) => void
   onPausePreview: () => void
   onCancel: () => void
@@ -44,6 +48,10 @@ export function TrimModal({
   pending,
   isPlaying,
   playheadRef,
+  volume,
+  muted,
+  onChangeVolume,
+  onToggleMute,
   onPlayPreview,
   onPausePreview,
   onCancel,
@@ -111,6 +119,13 @@ export function TrimModal({
         return
       }
 
+      if (event.code === 'KeyM' && !event.ctrlKey && !event.metaKey && !event.repeat) {
+        if (target?.matches('input, button, select, textarea')) return
+        event.preventDefault()
+        onToggleMute()
+        return
+      }
+
       if (event.code === 'Enter' && !event.repeat) {
         if (target?.matches('button, input[type="button"], input[type="submit"], select, textarea')) {
           return
@@ -122,7 +137,7 @@ export function TrimModal({
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [isPlaying, onCancel, onConfirm, onPausePreview, onPlayPreview, trimEnd, trimStart])
+  }, [isPlaying, onCancel, onConfirm, onPausePreview, onPlayPreview, onToggleMute, playheadRef, trimEnd, trimStart])
 
   const timeToX = useCallback(
     (timeSec: number) => {
@@ -519,6 +534,37 @@ export function TrimModal({
           </div>
 
           <div className="trim-footer-actions">
+            <div className="trim-volume" aria-label="Громкость предпрослушивания">
+              <button
+                type="button"
+                className={`btn btn--ghost btn--icon transport-volume-btn ${muted || volume === 0 ? 'is-muted' : ''}`}
+                onClick={onToggleMute}
+                aria-label={muted || volume === 0 ? 'Включить звук' : 'Выключить звук'}
+                title={muted || volume === 0 ? 'Включить звук (M)' : 'Выключить звук (M)'}
+              >
+                {muted || volume <= 0.001 ? (
+                  <VolumeX size={15} strokeWidth={1.85} aria-hidden="true" />
+                ) : volume < 0.5 ? (
+                  <Volume1 size={15} strokeWidth={1.85} aria-hidden="true" />
+                ) : (
+                  <Volume2 size={15} strokeWidth={1.85} aria-hidden="true" />
+                )}
+              </button>
+              <input
+                className="studio-range trim-volume-slider"
+                type="range"
+                min={0}
+                max={1}
+                step={0.01}
+                value={muted ? 0 : volume}
+                aria-label="Громкость предпрослушивания"
+                onChange={(event) => onChangeVolume(Number(event.target.value))}
+              />
+              <span className="transport-volume-value">
+                {Math.round((muted ? 0 : volume) * 100)}%
+              </span>
+            </div>
+
             <button
               type="button"
               className={`btn btn--secondary ${isPlaying ? 'is-playing' : ''}`}

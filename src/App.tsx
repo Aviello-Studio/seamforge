@@ -803,6 +803,10 @@ function App() {
           pending={pendingAudio}
           isPlaying={isPlaying && playbackMode === 'trim'}
           playheadRef={playheadRef}
+          volume={volume}
+          muted={muted}
+          onChangeVolume={handleChangeVolume}
+          onToggleMute={handleToggleMute}
           onPlayPreview={(s, e, from) => void handleTrimPlayPreview(s, e, from)}
           onPausePreview={() => void handleTrimPausePreview()}
           onCancel={() => void handleCancelTrim()}
