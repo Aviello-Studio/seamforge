@@ -419,9 +419,9 @@ select:focus-visible {
 
 .workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 304px;
-  gap: 10px;
-  padding: 10px;
+  grid-template-columns: minmax(0, 1fr) 292px;
+  gap: 12px;
+  padding: 12px;
   min-height: 0;
   overflow: hidden;
 }
@@ -644,6 +644,18 @@ select:focus-visible {
   color: var(--text-secondary);
 }
 
+.waveform-well {
+  flex: 1;
+  min-height: 0;
+  margin: 10px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-inset);
+  overflow: hidden;
+}
+
 .waveform-stage {
   position: relative;
   flex: 1;
@@ -750,13 +762,23 @@ select:focus-visible {
   gap: 0;
 }
 
+.seam-header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
 .seam-scope {
   display: flex;
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-  border-right: 1px solid var(--border-subtle);
+  margin: 10px 0 12px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
   background: var(--bg-inset);
+  overflow: hidden;
 }
 
 .seam-scope-canvas-wrap {
@@ -776,22 +798,19 @@ select:focus-visible {
 .seam-scope-legend {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 6px 12px;
-  border-top: 1px solid var(--border-subtle);
-  background: var(--bg-panel);
+  gap: 12px;
   font-size: 11px;
-  color: var(--text-secondary);
+  color: var(--text-muted);
 }
 
 .seam-legend-item {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
 }
 
 .seam-swatch {
-  width: 12px;
+  width: 10px;
   height: 2px;
   border-radius: 1px;
 }
@@ -1126,9 +1145,10 @@ select:focus-visible {
 
 .candidate-card-range {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
-  color: var(--text-secondary);
+  color: var(--text-primary);
 }
 
 .candidate-card-meta {
@@ -1137,31 +1157,36 @@ select:focus-visible {
   justify-content: space-between;
   gap: 6px;
   font-size: 11px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   color: var(--text-muted);
 }
 
-.candidate-card-tags {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-wrap: wrap;
+.candidate-card-fade {
+  color: var(--text-secondary);
 }
 
 .diag-grid {
   margin-top: 6px;
   padding-top: 8px;
   border-top: 1px solid var(--border-subtle);
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px 12px;
 }
 
 .diag-row {
-  display: grid;
-  grid-template-columns: 64px 1fr 34px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 10px;
+}
+
+.diag-row-head {
+  display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 11px;
+  justify-content: space-between;
+  gap: 6px;
 }
 
 .diag-label {
@@ -1169,6 +1194,8 @@ select:focus-visible {
 }
 
 .diag-bar {
+  display: block;
+  width: 100%;
   height: 4px;
   border-radius: 2px;
   background: var(--bg-elevated);
@@ -1176,6 +1203,7 @@ select:focus-visible {
 }
 
 .diag-bar-fill {
+  display: block;
   height: 100%;
   border-radius: 2px;
   background: var(--accent);
@@ -1638,8 +1666,7 @@ select:focus-visible {
   }
 
   .seam-scope {
-    border-right: 0;
-    border-bottom: 1px solid var(--border-subtle);
+    margin: 10px 12px 0;
   }
 }
 

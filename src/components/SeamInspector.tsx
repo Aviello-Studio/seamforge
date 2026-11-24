@@ -43,8 +43,10 @@ function formatContinuityPercent(continuity: number): { label: string; tone: 'is
 function drawPolyline(
   ctx: CanvasRenderingContext2D,
   samples: number[],
-  width: number,
+  padX: number,
+  plotW: number,
   midY: number,
+  halfH: number,
   amplitudeScale: number,
   strokeStyle: string,
   lineWidth: number,
@@ -58,8 +60,8 @@ function drawPolyline(
 
   const lastIdx = samples.length - 1
   for (let i = 0; i < samples.length; i += 1) {
-    const x = (i / lastIdx) * width
-    const y = midY - clamp(samples[i] * amplitudeScale, -1, 1) * (midY - 8)
+    const x = padX + (i / lastIdx) * plotW
+    const y = midY - clamp(samples[i] * amplitudeScale, -1, 1) * halfH
     if (i === 0) ctx.moveTo(x, y)
     else ctx.lineTo(x, y)
   }
@@ -119,44 +121,43 @@ export function SeamInspector({
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     const { width, height } = size
+    const padX = 12
+    const padY = 14
+    const plotW = Math.max(1, width - padX * 2)
     const midY = height / 2
+    const halfH = Math.max(10, midY - padY)
 
     ctx.fillStyle = '#0e1013'
     ctx.fillRect(0, 0, width, height)
 
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)'
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.035)'
     ctx.lineWidth = 1
     ctx.beginPath()
-    ctx.moveTo(0, height * 0.25)
-    ctx.lineTo(width, height * 0.25)
-    ctx.moveTo(0, height * 0.75)
-    ctx.lineTo(width, height * 0.75)
+    ctx.moveTo(padX, midY - halfH * 0.5)
+    ctx.lineTo(width - padX, midY - halfH * 0.5)
+    ctx.moveTo(padX, midY + halfH * 0.5)
+    ctx.lineTo(width - padX, midY + halfH * 0.5)
     ctx.stroke()
 
-    ctx.strokeStyle = 'rgba(236, 239, 244, 0.14)'
+    ctx.strokeStyle = 'rgba(236, 239, 244, 0.12)'
     ctx.beginPath()
-    ctx.moveTo(0, midY)
-    ctx.lineTo(width, midY)
+    ctx.moveTo(padX, midY)
+    ctx.lineTo(width - padX, midY)
     ctx.stroke()
 
     if (!preview || preview.blended.length < 2) {
-      ctx.fillStyle = '#6c7484'
-      ctx.font = '500 12px "Segoe UI Variable", "Segoe UI", system-ui, sans-serif'
-      ctx.textAlign = 'center'
-      ctx.textBaseline = 'middle'
-      ctx.fillText('Осциллограмма стыка появится после расчёта', width / 2, midY)
       return
     }
 
-    const fadeStartX = clamp(preview.crossfadeStartRatio, 0, 1) * width
-    const fadeEndX = clamp(preview.crossfadeEndRatio, 0, 1) * width
+    const fadeStartX = padX + clamp(preview.crossfadeStartRatio, 0, 1) * plotW
+    const fadeEndX = padX + clamp(preview.crossfadeEndRatio, 0, 1) * plotW
 
     if (fadeEndX > fadeStartX) {
       ctx.fillStyle = 'rgba(229, 154, 60, 0.08)'
       ctx.fillRect(fadeStartX, 0, fadeEndX - fadeStartX, height)
 
       ctx.save()
-      ctx.strokeStyle = 'rgba(229, 154, 60, 0.36)'
+      ctx.strokeStyle = 'rgba(229, 154, 60, 0.34)'
       ctx.lineWidth = 1
       ctx.setLineDash([3, 3])
       ctx.beginPath()
@@ -181,28 +182,12 @@ export function SeamInspector({
       const a = Math.abs(s)
       if (a > peakAbs) peakAbs = a
     }
-    const amplitudeScale = peakAbs > 0.001 ? Math.min(3.2, 0.92 / peakAbs) : 1
+    const amplitudeScale = peakAbs > 0.001 ? Math.min(3.2, 0.9 / peakAbs) : 1
 
-    drawPolyline(ctx, preview.tail, width, midY, amplitudeScale, 'rgba(229, 154, 60, 0.72)', 1.25)
-    drawPolyline(ctx, preview.head, width, midY, amplitudeScale, 'rgba(93, 163, 224, 0.72)', 1.25)
-    drawPolyline(ctx, preview.blended, width, midY, amplitudeScale, '#eceff4', 1.75)
-
-    const zoneLabel = `Кроссфейд ${clampedCrossfade} мс`
-    ctx.font = '500 10px "Cascadia Mono", Consolas, monospace'
-    const textW = ctx.measureText(zoneLabel).width
-    const badgeW = textW + 10
-    const centerZoneX = fadeEndX > fadeStartX ? (fadeStartX + fadeEndX) / 2 : width / 2
-    const badgeX = clamp(centerZoneX - badgeW / 2, 6, Math.max(6, width - badgeW - 6))
-    ctx.fillStyle = 'rgba(18, 20, 23, 0.85)'
-    ctx.fillRect(badgeX, 6, badgeW, 17)
-    ctx.strokeStyle = 'rgba(229, 154, 60, 0.35)'
-    ctx.lineWidth = 1
-    ctx.strokeRect(badgeX + 0.5, 6.5, badgeW - 1, 16)
-    ctx.fillStyle = '#e59a3c'
-    ctx.textAlign = 'left'
-    ctx.textBaseline = 'middle'
-    ctx.fillText(zoneLabel, badgeX + 5, 14.5)
-  }, [clampedCrossfade, preview, size])
+    drawPolyline(ctx, preview.tail, padX, plotW, midY, halfH, amplitudeScale, 'rgba(229, 154, 60, 0.72)', 1.25)
+    drawPolyline(ctx, preview.head, padX, plotW, midY, halfH, amplitudeScale, 'rgba(93, 163, 224, 0.72)', 1.25)
+    drawPolyline(ctx, preview.blended, padX, plotW, midY, halfH, amplitudeScale, '#eceff4', 1.75)
+  }, [preview, size])
 
   const phaseMetric = preview ? formatPhasePercent(preview.phaseCorrelation) : null
   const continuityMetric = preview ? formatContinuityPercent(preview.seamContinuity) : null
@@ -210,7 +195,23 @@ export function SeamInspector({
   return (
     <section className="panel seam-panel" aria-label="Инспектор стыка">
       <div className="panel-header">
-        <h2 className="panel-title">Инспектор стыка</h2>
+        <div className="seam-header-left">
+          <h2 className="panel-title">Стык</h2>
+          <div className="seam-scope-legend" aria-label="Легенда осциллограммы">
+            <span className="seam-legend-item">
+              <i className="seam-swatch seam-swatch--tail" aria-hidden="true" />
+              Конец
+            </span>
+            <span className="seam-legend-item">
+              <i className="seam-swatch seam-swatch--head" aria-hidden="true" />
+              Начало
+            </span>
+            <span className="seam-legend-item">
+              <i className="seam-swatch seam-swatch--blended" aria-hidden="true" />
+              Склейка
+            </span>
+          </div>
+        </div>
         <div className="seam-metrics">
           <span className={`seam-metric ${phaseMetric?.tone ?? ''}`}>
             <span>Фаза</span>
@@ -231,21 +232,6 @@ export function SeamInspector({
               className="seam-scope-canvas"
               aria-label="Осциллограмма совмещения конца и начала петли"
             />
-          </div>
-
-          <div className="seam-scope-legend" aria-label="Легенда осциллограммы">
-            <span className="seam-legend-item">
-              <i className="seam-swatch seam-swatch--tail" aria-hidden="true" />
-              Конец
-            </span>
-            <span className="seam-legend-item">
-              <i className="seam-swatch seam-swatch--head" aria-hidden="true" />
-              Начало
-            </span>
-            <span className="seam-legend-item">
-              <i className="seam-swatch seam-swatch--blended" aria-hidden="true" />
-              Склейка
-            </span>
           </div>
         </div>
 
@@ -346,14 +332,7 @@ export function SeamInspector({
             </div>
 
             <div className="seam-curve-row">
-              <div className="boundary-row-head">
-                <span className="boundary-label">Кривая</span>
-                <span className="seam-curve-hint">
-                  {curve === 'constantGain'
-                    ? 'Для фазово-согласованных петель'
-                    : 'Для пэдов и эмбиента'}
-                </span>
-              </div>
+              <span className="boundary-label">Кривая</span>
               <div className="curve-toggle" role="group" aria-label="Кривая кроссфейда">
                 <button
                   type="button"

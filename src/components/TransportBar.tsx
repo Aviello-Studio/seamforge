@@ -127,7 +127,7 @@ export function TransportBar({
           title="Прослушать переход за 2.5 секунды до стыка (S)"
         >
           <Repeat size={14} strokeWidth={1.85} aria-hidden="true" />
-          <span>Стык (-2.5с)</span>
+          <span>Стык</span>
           <kbd className="kbd">S</kbd>
         </button>
 
@@ -174,12 +174,15 @@ export function TransportBar({
             onSeek(nextPos)
           }}
         />
-        <div
-          className={`transport-status ${!audioAvailable ? 'is-warning' : ''}`}
-          title={!audioAvailable ? 'Аудиоустройство вывода недоступно' : statusText}
-        >
-          {!audioAvailable ? 'Аудиоустройство вывода недоступно' : statusText}
-        </div>
+        {!audioAvailable ? (
+          <div className="transport-status is-warning" title="Аудиоустройство вывода недоступно">
+            Аудиоустройство вывода недоступно
+          </div>
+        ) : statusText ? (
+          <div className="transport-status" title={statusText}>
+            {statusText}
+          </div>
+        ) : null}
       </div>
 
       <div className="transport-volume" aria-label="Громкость мониторинга">

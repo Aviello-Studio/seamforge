@@ -40,7 +40,7 @@ import { TitleBar } from './components/TitleBar'
 import { TransportBar } from './components/TransportBar'
 import { TrimModal } from './components/TrimModal'
 import { WaveformCanvas } from './components/WaveformCanvas'
-import { clamp, defaultExportFileName, formatSampleRate, formatTime } from './lib/format'
+import { clamp, defaultExportFileName } from './lib/format'
 
 type ConfirmAction =
   | { type: 'clear' }
@@ -90,7 +90,22 @@ function App() {
   const [muted, setMuted] = useState(false)
   const [exportFormat, setExportFormat] = useState<WavFormat>('pcm24')
   const [exporting, setExporting] = useState(false)
-  const [statusText, setStatusText] = useState('Готово к работе')
+  const [statusText, setStatusText] = useState('')
+  const statusTimerRef = useRef<number | null>(null)
+
+  const flashStatus = useCallback((text: string, durationMs = 3500) => {
+    if (statusTimerRef.current !== null) {
+      window.clearTimeout(statusTimerRef.current)
+      statusTimerRef.current = null
+    }
+    setStatusText(text)
+    if (durationMs > 0) {
+      statusTimerRef.current = window.setTimeout(() => {
+        statusTimerRef.current = null
+        setStatusText('')
+      }, durationMs)
+    }
+  }, [])
 
   const playheadRef = useRef(0)
   const loopOffsetRef = useRef(0)
@@ -138,6 +153,9 @@ function App() {
     return () => {
       if (seamUpdateTimerRef.current !== null) {
         window.clearTimeout(seamUpdateTimerRef.current)
+      }
+      if (statusTimerRef.current !== null) {
+        window.clearTimeout(statusTimerRef.current)
       }
     }
   }, [])
@@ -368,9 +386,7 @@ function App() {
         setBeatTimes([])
         playheadRef.current = 0
         loopOffsetRef.current = 0
-        setStatusText(
-          `${trimmed.channels === 1 ? 'Моно' : `${trimmed.channels} кан.`} · ${formatSampleRate(trimmed.sampleRate)}${trimmed.bitDepth ? ` · ${trimmed.bitDepth}-bit` : ''} · ${formatTime(trimmed.duration)}`,
-        )
+        setStatusText('')
         await syncSeamNow(0, trimmed.duration, 40, 'constantGain')
       } catch (error) {
         setStatusText(`Ошибка обрезки: ${String(error)}`)
@@ -402,9 +418,7 @@ function App() {
           loopOffsetRef.current = state.loopOffsetSec
         }
       }
-      setStatusText(
-        `Вариант #${candidate.id + 1}: уверенность ${candidate.confidence}%, петля ${formatTime(candidate.loopDuration)}`,
-      )
+      setStatusText('')
     },
     [isPlaying, syncSeamNow],
   )
@@ -433,11 +447,9 @@ function App() {
         await syncSeamNow(best.start, best.end, best.crossfadeMs, best.curve)
         playheadRef.current = Math.max(best.start, best.end - Math.min(2.5, (best.end - best.start) * 0.35))
         loopOffsetRef.current = Math.max(0, playheadRef.current - best.start)
-        setStatusText(
-          `Найдено вариантов: ${result.candidates.length} · ${result.bpm.toFixed(1)} BPM (${result.beatsPerBar}/4) · лучший ${best.confidence}%`,
-        )
+        setStatusText('')
       } else {
-        setStatusText('Подходящие музыкальные стыки не найдены')
+        flashStatus('Подходящие стыки не найдены', 4000)
       }
     } catch (error) {
       if (runId === analysisRunIdRef.current) {
@@ -503,12 +515,12 @@ function App() {
         const snapped = await snapToZeroCrossing(which === 'start' ? start : end, which === 'end')
         if (which === 'start') handleChangeStart(snapped)
         else handleChangeEnd(snapped)
-        setStatusText(`Точка ${which === 'start' ? 'начала' : 'конца'} привязана к zero crossing`)
+        flashStatus('Привязано к zero crossing', 2200)
       } catch (error) {
-        setStatusText(`Ошибка привязки: ${String(error)}`)
+        flashStatus(`Ошибка привязки: ${String(error)}`, 4000)
       }
     },
-    [audio, end, handleChangeEnd, handleChangeStart, start],
+    [audio, end, flashStatus, handleChangeEnd, handleChangeStart, start],
   )
 
   const handleChangeCrossfade = useCallback(
@@ -567,11 +579,11 @@ function App() {
       setAudioAvailable(state.audioAvailable)
       playheadRef.current = state.positionSec
       loopOffsetRef.current = state.loopOffsetSec
-      setStatusText('Прослушивание стыка (за 2.5 с до склейки)')
+      setStatusText('')
     } catch (error) {
-      setStatusText(`Ошибка прослушивания стыка: ${String(error)}`)
+      flashStatus(`Ошибка прослушивания: ${String(error)}`, 4500)
     }
-  }, [audio])
+  }, [audio, flashStatus])
 
   const handleSeek = useCallback(
     async (timeSec: number) => {
@@ -627,7 +639,7 @@ function App() {
       setExporting(true)
       setStatusText('Запись WAV в оригинальной частоте…')
       const saved = await exportWav(outputPath, exportFormat)
-      setStatusText(`Сохранено: ${saved}`)
+      flashStatus(`Сохранено: ${fileNameFromPath(saved)}`, 4500)
     } catch (error) {
       setStatusText(`Ошибка экспорта: ${String(error)}`)
     } finally {

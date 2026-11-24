@@ -22,6 +22,7 @@ export interface WaveformCanvasProps {
 
 const TOP_BAR_H = 22
 const RULER_H = 20
+const PAD_X = 12
 const MIN_ZOOM = 1
 const MAX_ZOOM = 64
 const MIN_LOOP_GAP = 0.1
@@ -120,20 +121,22 @@ export function WaveformCanvas({
     return () => observer.disconnect()
   }, [])
 
+  const plotWidth = Math.max(1, size.width - PAD_X * 2)
+
   const timeToX = useCallback(
     (timeSec: number) => {
-      if (size.width <= 0) return 0
-      return ((timeSec - clampedViewStart) / viewDuration) * size.width
+      if (size.width <= 0) return PAD_X
+      return PAD_X + ((timeSec - clampedViewStart) / viewDuration) * plotWidth
     },
-    [clampedViewStart, size.width, viewDuration],
+    [clampedViewStart, plotWidth, size.width, viewDuration],
   )
 
   const xToTime = useCallback(
     (px: number) => {
       if (size.width <= 0) return 0
-      return clampedViewStart + (px / size.width) * viewDuration
+      return clampedViewStart + ((px - PAD_X) / plotWidth) * viewDuration
     },
-    [clampedViewStart, size.width, viewDuration],
+    [clampedViewStart, plotWidth, size.width, viewDuration],
   )
 
   const applyZoom = useCallback(
@@ -206,10 +209,12 @@ export function WaveformCanvas({
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     const { width, height } = size
+    const plotLeft = PAD_X
+    const plotRight = Math.max(plotLeft + 1, width - PAD_X)
     const waveTop = TOP_BAR_H
-    const waveBottom = Math.max(waveTop + 20, height - RULER_H)
+    const waveBottom = Math.max(waveTop + 24, height - RULER_H)
     const waveMidY = (waveTop + waveBottom) / 2
-    const waveHalfH = Math.max(8, (waveBottom - waveTop) * 0.45)
+    const waveHalfH = Math.max(8, (waveBottom - waveTop) * 0.39)
 
     // Recessed well background
     ctx.fillStyle = '#0e1013'
@@ -237,16 +242,16 @@ export function WaveformCanvas({
     // Horizontal dB reference lines
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)'
     ctx.beginPath()
-    ctx.moveTo(0, waveMidY - waveHalfH * 0.5)
-    ctx.lineTo(width, waveMidY - waveHalfH * 0.5)
-    ctx.moveTo(0, waveMidY + waveHalfH * 0.5)
-    ctx.lineTo(width, waveMidY + waveHalfH * 0.5)
+    ctx.moveTo(plotLeft, waveMidY - waveHalfH * 0.5)
+    ctx.lineTo(plotRight, waveMidY - waveHalfH * 0.5)
+    ctx.moveTo(plotLeft, waveMidY + waveHalfH * 0.5)
+    ctx.lineTo(plotRight, waveMidY + waveHalfH * 0.5)
     ctx.stroke()
 
     ctx.strokeStyle = 'rgba(236, 239, 244, 0.09)'
     ctx.beginPath()
-    ctx.moveTo(0, waveMidY)
-    ctx.lineTo(width, waveMidY)
+    ctx.moveTo(plotLeft, waveMidY)
+    ctx.lineTo(plotRight, waveMidY)
     ctx.stroke()
 
     const viewEnd = clampedViewStart + viewDuration
@@ -260,6 +265,7 @@ export function WaveformCanvas({
         const bt = beatTimes[i]
         if (bt < clampedViewStart || bt > viewEnd) continue
         const x = Math.round(timeToX(bt)) + 0.5
+        if (x < plotLeft || x > plotRight) continue
         ctx.strokeStyle =
           i % barStride === 0 ? 'rgba(236, 239, 244, 0.14)' : 'rgba(236, 239, 244, 0.055)'
         ctx.lineWidth = 1
@@ -272,28 +278,28 @@ export function WaveformCanvas({
 
     // Dim out-of-loop areas
     ctx.fillStyle = 'rgba(7, 8, 10, 0.46)'
-    if (startX > 0) {
-      ctx.fillRect(0, waveTop, Math.min(width, startX), waveBottom - waveTop)
+    if (startX > plotLeft) {
+      ctx.fillRect(plotLeft, waveTop, Math.min(plotRight, startX) - plotLeft, waveBottom - waveTop)
     }
-    if (endX < width) {
-      const left = Math.max(0, endX)
-      ctx.fillRect(left, waveTop, width - left, waveBottom - waveTop)
+    if (endX < plotRight) {
+      const left = Math.max(plotLeft, endX)
+      ctx.fillRect(left, waveTop, plotRight - left, waveBottom - waveTop)
     }
 
     // Crossfade zone shading at loop head (steel blue) and tail (warm amber)
     const fadeSec = crossfadeMs / 1000
     if (fadeSec > 0 && end > start) {
       const headFadeEnd = Math.min(end, start + fadeSec)
-      const headX0 = clamp(timeToX(start), 0, width)
-      const headX1 = clamp(timeToX(headFadeEnd), 0, width)
+      const headX0 = clamp(timeToX(start), plotLeft, plotRight)
+      const headX1 = clamp(timeToX(headFadeEnd), plotLeft, plotRight)
       if (headX1 > headX0) {
         ctx.fillStyle = 'rgba(93, 163, 224, 0.16)'
         ctx.fillRect(headX0, waveTop, Math.max(1.5, headX1 - headX0), waveBottom - waveTop)
       }
 
       const tailFadeStart = Math.max(start, end - fadeSec)
-      const tailX0 = clamp(timeToX(tailFadeStart), 0, width)
-      const tailX1 = clamp(timeToX(end), 0, width)
+      const tailX0 = clamp(timeToX(tailFadeStart), plotLeft, plotRight)
+      const tailX1 = clamp(timeToX(end), plotLeft, plotRight)
       if (tailX1 > tailX0) {
         ctx.fillStyle = 'rgba(229, 154, 60, 0.18)'
         ctx.fillRect(tailX0, waveTop, Math.max(1.5, tailX1 - tailX0), waveBottom - waveTop)
@@ -308,9 +314,11 @@ export function WaveformCanvas({
 
     if (peaks.length > 0 && duration > 0) {
       const peakCount = peaks.length
-      for (let px = 0; px < width; px += 1) {
-        const t0 = clampedViewStart + (px / width) * viewDuration
-        const t1 = clampedViewStart + ((px + 1) / width) * viewDuration
+      const drawW = Math.max(1, plotRight - plotLeft)
+      for (let iPx = 0; iPx < drawW; iPx += 1) {
+        const px = plotLeft + iPx
+        const t0 = clampedViewStart + (iPx / drawW) * viewDuration
+        const t1 = clampedViewStart + ((iPx + 1) / drawW) * viewDuration
         const idx0 = clamp(Math.floor((t0 / safeDuration) * peakCount), 0, peakCount - 1)
         const idx1 = clamp(Math.ceil((t1 / safeDuration) * peakCount), idx0 + 1, peakCount)
 
@@ -338,9 +346,9 @@ export function WaveformCanvas({
     }
 
     // Time ruler ticks along bottom edge
-    if (duration > 0 && width > 60) {
+    if (duration > 0 && plotRight - plotLeft > 60) {
       const niceSteps = [0.25, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300]
-      const targetTickCount = Math.max(3, Math.floor(width / 96))
+      const targetTickCount = Math.max(3, Math.floor((plotRight - plotLeft) / 104))
       const rawStep = viewDuration / targetTickCount
       const stepSec = niceSteps.find((s) => s >= rawStep) ?? 300
       const firstTick = Math.ceil(clampedViewStart / stepSec) * stepSec
@@ -353,7 +361,7 @@ export function WaveformCanvas({
 
       for (let t = firstTick; t <= viewEnd + 1e-6; t += stepSec) {
         const x = Math.round(timeToX(t)) + 0.5
-        if (x < 6 || x > width - 6) continue
+        if (x < plotLeft || x > plotRight) continue
         ctx.beginPath()
         ctx.moveTo(x, waveBottom)
         ctx.lineTo(x, waveBottom + 4)
@@ -365,14 +373,14 @@ export function WaveformCanvas({
           stepSec < 1
             ? `${mins}:${secs.toFixed(1).padStart(4, '0')}`
             : `${mins}:${Math.round(secs).toString().padStart(2, '0')}`
-        ctx.textAlign = x > width - 38 ? 'right' : x < 34 ? 'left' : 'center'
+        ctx.textAlign = x > plotRight - 28 ? 'right' : x < plotLeft + 24 ? 'left' : 'center'
         ctx.fillText(label, x, waveBottom + RULER_H / 2 + 1)
       }
     }
 
     // Draggable top loop-region bar
-    const barLeft = clamp(startX, 0, width)
-    const barRight = clamp(endX, 0, width)
+    const barLeft = clamp(startX, plotLeft, plotRight)
+    const barRight = clamp(endX, plotLeft, plotRight)
     if (barRight > barLeft) {
       ctx.fillStyle = 'rgba(229, 154, 60, 0.18)'
       ctx.fillRect(barLeft, 1, barRight - barLeft, TOP_BAR_H - 2)
@@ -625,7 +633,7 @@ export function WaveformCanvas({
       const nextEnd = clamp(xToTime(x), drag.originStart + MIN_LOOP_GAP, duration)
       onChangeBounds(drag.originStart, nextEnd)
     } else if (drag.mode === 'move') {
-      const deltaSec = ((x - drag.originX) / size.width) * viewDuration
+      const deltaSec = ((x - drag.originX) / plotWidth) * viewDuration
       const span = drag.originEnd - drag.originStart
       const nextStart = clamp(drag.originStart + deltaSec, 0, Math.max(0, duration - span))
       onChangeBounds(nextStart, nextStart + span)
@@ -700,13 +708,6 @@ export function WaveformCanvas({
     <section className="panel waveform-panel" aria-label="Волновая форма и границы петли">
       <div className="panel-header waveform-toolbar">
         <div className="waveform-toolbar-group">
-          <h2 className="panel-title">Волновая форма</h2>
-          <span className="waveform-span-readout">
-            {formatTime(start)} → {formatTime(end)}
-          </span>
-        </div>
-
-        <div className="waveform-toolbar-controls">
           <div className="waveform-zoom-group" role="group" aria-label="Масштаб волновой формы">
             <button
               type="button"
@@ -757,7 +758,9 @@ export function WaveformCanvas({
             <Crosshair size={13} strokeWidth={1.85} aria-hidden="true" />
             <span>К стыку</span>
           </button>
+        </div>
 
+        <div className="waveform-toolbar-controls">
           <button
             type="button"
             className={`btn btn--ghost ${showBeats && beatTimes.length > 0 ? 'is-active' : ''}`}
@@ -776,44 +779,46 @@ export function WaveformCanvas({
         </div>
       </div>
 
-      <div
-        ref={stageRef}
-        className="waveform-stage"
-        style={{ cursor }}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={endDrag}
-        onPointerCancel={endDrag}
-      >
-        <canvas ref={baseCanvasRef} className="waveform-canvas" />
-        <canvas ref={overlayCanvasRef} className="waveform-overlay" aria-hidden="true" />
-      </div>
-
-      {zoom > 1 && (
+      <div className="waveform-well">
         <div
-          ref={panbarRef}
-          className="waveform-panbar"
-          role="scrollbar"
-          aria-label="Навигация по волновой форме"
-          aria-orientation="horizontal"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={Math.round(thumbLeftPct)}
-          onPointerDown={handlePanbarPointerDown}
-          onPointerMove={handlePanbarPointerMove}
-          onPointerUp={endPanDrag}
-          onPointerCancel={endPanDrag}
+          ref={stageRef}
+          className="waveform-stage"
+          style={{ cursor }}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={endDrag}
+          onPointerCancel={endDrag}
         >
-          <div
-            className="waveform-panbar-loop"
-            style={{ left: `${loopLeftPct}%`, width: `${loopWidthPct}%` }}
-          />
-          <div
-            className="waveform-panbar-thumb"
-            style={{ left: `${thumbLeftPct}%`, width: `${thumbWidthPct}%` }}
-          />
+          <canvas ref={baseCanvasRef} className="waveform-canvas" />
+          <canvas ref={overlayCanvasRef} className="waveform-overlay" aria-hidden="true" />
         </div>
-      )}
+
+        {zoom > 1 && (
+          <div
+            ref={panbarRef}
+            className="waveform-panbar"
+            role="scrollbar"
+            aria-label="Навигация по волновой форме"
+            aria-orientation="horizontal"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(thumbLeftPct)}
+            onPointerDown={handlePanbarPointerDown}
+            onPointerMove={handlePanbarPointerMove}
+            onPointerUp={endPanDrag}
+            onPointerCancel={endPanDrag}
+          >
+            <div
+              className="waveform-panbar-loop"
+              style={{ left: `${loopLeftPct}%`, width: `${loopWidthPct}%` }}
+            />
+            <div
+              className="waveform-panbar-thumb"
+              style={{ left: `${thumbLeftPct}%`, width: `${thumbWidthPct}%` }}
+            />
+          </div>
+        )}
+      </div>
     </section>
   )
 }

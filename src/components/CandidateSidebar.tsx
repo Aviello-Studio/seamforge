@@ -56,7 +56,7 @@ export function CandidateSidebar({
   return (
     <section className="panel sidebar-panel" aria-label="Варианты стыков">
       <div className="panel-header sidebar-header">
-        <h2 className="panel-title">Варианты стыков</h2>
+        <h2 className="panel-title">Стыки</h2>
         {bpm !== null && (
           <span className="chip chip--accent">
             {bpm.toFixed(1)} BPM{beatsPerBar ? ` · ${beatsPerBar}/4` : ''}
@@ -69,7 +69,7 @@ export function CandidateSidebar({
           <div className="analysis-progress" role="status" aria-live="polite">
             <div className="analysis-progress-meta">
               <span className="analysis-progress-stage">
-                {progressStage || 'Анализ аудио…'}
+                {progressStage || 'Анализ…'}
               </span>
               <span className="analysis-progress-pct">{progressPct}%</span>
             </div>
@@ -102,7 +102,7 @@ export function CandidateSidebar({
             disabled={!hasAudio}
           >
             <Sparkles size={14} strokeWidth={1.85} aria-hidden="true" />
-            <span>Найти лучшие стыки</span>
+            <span>Найти стыки</span>
           </button>
         )}
       </div>
@@ -111,8 +111,8 @@ export function CandidateSidebar({
         <div className="sidebar-empty">
           <p>
             {analyzing
-              ? 'Подбираем музыкально согласованные точки бесшовной склейки…'
-              : 'Запустите анализ, чтобы подобрать лучшие точки петли по гармонии, ритму и фазе.'}
+              ? 'Подбор музыкальных точек петли…'
+              : 'Нажмите «Найти стыки» для автоподбора петли.'}
           </p>
         </div>
       ) : (
@@ -120,7 +120,8 @@ export function CandidateSidebar({
           {candidates.map((candidate, index) => {
             const isSelected = selectedId === candidate.id
             const conf = Math.round(clamp(candidate.confidence, 0, 100))
-            const curveLabel =
+            const curveShort = candidate.curve === 'constantGain' ? 'CG' : 'EP'
+            const curveTitle =
               candidate.curve === 'constantGain' ? 'Constant-Gain' : 'Equal-Power'
 
             const diagRows = isSelected
@@ -144,41 +145,39 @@ export function CandidateSidebar({
                 <div className="candidate-card-top">
                   <span className="candidate-index">
                     <kbd className="kbd">{index + 1}</kbd>
-                    <span>Вариант {index + 1}</span>
+                    <span className="candidate-card-range">
+                      {formatTime(candidate.start)} → {formatTime(candidate.end)}
+                    </span>
                   </span>
                   <span className={`candidate-confidence ${confidenceTier(conf)}`}>
                     {conf}%
                   </span>
                 </div>
 
-                <div className="candidate-card-range">
-                  {formatTime(candidate.start)} → {formatTime(candidate.end)}
-                </div>
-
                 <div className="candidate-card-meta">
-                  {candidate.bars !== null && (
-                    <span>{formatBars(candidate.bars)}</span>
-                  )}
-                  <span>{formatTime(candidate.loopDuration)}</span>
-                </div>
-
-                <div className="candidate-card-tags">
-                  <span className="chip">{Math.round(candidate.crossfadeMs)} мс</span>
-                  <span className="chip">{curveLabel}</span>
+                  <span>
+                    {candidate.bars !== null ? `${formatBars(candidate.bars)} · ` : ''}
+                    {formatTime(candidate.loopDuration)}
+                  </span>
+                  <span className="candidate-card-fade" title={curveTitle}>
+                    {Math.round(candidate.crossfadeMs)} мс · {curveShort}
+                  </span>
                 </div>
 
                 {isSelected && (
                   <div className="diag-grid" aria-label="Диагностика стыка">
                     {diagRows.map((row) => (
                       <div key={row.label} className="diag-row">
-                        <span className="diag-label">{row.label}</span>
+                        <div className="diag-row-head">
+                          <span className="diag-label">{row.label}</span>
+                          <span className="diag-value">{row.value}%</span>
+                        </div>
                         <span className="diag-bar" aria-hidden="true">
                           <span
                             className="diag-bar-fill"
                             style={{ width: `${row.value}%` }}
                           />
                         </span>
-                        <span className="diag-value">{row.value}%</span>
                       </div>
                     ))}
                   </div>
