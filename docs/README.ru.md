@@ -6,8 +6,8 @@
 
 **Настольная студия для создания бесшовных музыкальных аудиопетель** · *от **Aviello Studio***
 
-[![CI](https://github.com/NIGATAulxgenii/seamforge/actions/workflows/ci.yml/badge.svg)](https://github.com/NIGATAulxgenii/seamforge/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/badge/Release-v2.0.0-e59a3c.svg)](https://github.com/NIGATAulxgenii/seamforge/releases)
+[![CI](https://github.com/Aviello-Studio/seamforge/actions/workflows/ci.yml/badge.svg)](https://github.com/Aviello-Studio/seamforge/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/badge/Release-v2.0.0-e59a3c.svg)](https://github.com/Aviello-Studio/seamforge/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-5da3e0.svg)](../LICENSE)
 ![Platform: Windows 10/11](https://img.shields.io/badge/Platform-Windows%2010%2F11-272b33.svg)
 ![Stack: Tauri v2 + Rust](https://img.shields.io/badge/Stack-Tauri%20v2%20%2B%20Rust-191c21.svg)
@@ -108,7 +108,7 @@ flowchart LR
 
 Готовая переносимая сборка для Windows 10/11 (x64) без установщика, сторонних DLL и внешних рантаймов:
 
-1. Перейдите в раздел **[GitHub Releases](https://github.com/NIGATAulxgenii/seamforge/releases)**.
+1. Перейдите в раздел **[GitHub Releases](https://github.com/Aviello-Studio/seamforge/releases)**.
 2. Скачайте `SeamForge-portable.zip` (`2.92 МБ`) и распакуйте в любую папку.
 3. Запустите `SeamForge.exe` (`6.92 МБ` автономный исполняемый файл).
 

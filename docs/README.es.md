@@ -6,8 +6,8 @@
 
 **Estudio de escritorio de precisión para bucles musicales sin cortes** · *por **Aviello Studio***
 
-[![CI](https://github.com/NIGATAulxgenii/seamforge/actions/workflows/ci.yml/badge.svg)](https://github.com/NIGATAulxgenii/seamforge/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/badge/Release-v2.0.0-e59a3c.svg)](https://github.com/NIGATAulxgenii/seamforge/releases)
+[![CI](https://github.com/Aviello-Studio/seamforge/actions/workflows/ci.yml/badge.svg)](https://github.com/Aviello-Studio/seamforge/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/badge/Release-v2.0.0-e59a3c.svg)](https://github.com/Aviello-Studio/seamforge/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-5da3e0.svg)](../LICENSE)
 ![Platform: Windows 10/11](https://img.shields.io/badge/Platform-Windows%2010%2F11-272b33.svg)
 ![Stack: Tauri v2 + Rust](https://img.shields.io/badge/Stack-Tauri%20v2%20%2B%20Rust-191c21.svg)
@@ -108,7 +108,7 @@ flowchart LR
 
 Compilación portátil lista para Windows 10/11 (x64) — sin instalador, sin DLL adicionales y sin entornos externos:
 
-1. Abre **[GitHub Releases](https://github.com/NIGATAulxgenii/seamforge/releases)**.
+1. Abre **[GitHub Releases](https://github.com/Aviello-Studio/seamforge/releases)**.
 2. Descarga `SeamForge-portable.zip` (`2.92 MB`) y extráelo en cualquier carpeta.
 3. Ejecuta `SeamForge.exe` (ejecutable autónomo de `6.92 MB`).
 

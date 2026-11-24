@@ -6,8 +6,8 @@
 
 **Präzisions-Desktop-Studio für nahtlose musikalische Audio-Loops** · *von **Aviello Studio***
 
-[![CI](https://github.com/NIGATAulxgenii/seamforge/actions/workflows/ci.yml/badge.svg)](https://github.com/NIGATAulxgenii/seamforge/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/badge/Release-v2.0.0-e59a3c.svg)](https://github.com/NIGATAulxgenii/seamforge/releases)
+[![CI](https://github.com/Aviello-Studio/seamforge/actions/workflows/ci.yml/badge.svg)](https://github.com/Aviello-Studio/seamforge/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/badge/Release-v2.0.0-e59a3c.svg)](https://github.com/Aviello-Studio/seamforge/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-5da3e0.svg)](../LICENSE)
 ![Platform: Windows 10/11](https://img.shields.io/badge/Platform-Windows%2010%2F11-272b33.svg)
 ![Stack: Tauri v2 + Rust](https://img.shields.io/badge/Stack-Tauri%20v2%20%2B%20Rust-191c21.svg)
@@ -108,7 +108,7 @@ flowchart LR
 
 Sofort einsatzbereiter Windows 10/11 (x64) Portable-Build — kein Installer, keine zusätzlichen DLLs, keine externe Runtime:
 
-1. Öffne **[GitHub Releases](https://github.com/NIGATAulxgenii/seamforge/releases)**.
+1. Öffne **[GitHub Releases](https://github.com/Aviello-Studio/seamforge/releases)**.
 2. Lade `SeamForge-portable.zip` (`2.92 MB`) herunter und entpacke das Archiv.
 3. Starte `SeamForge.exe` (`6.92 MB` eigenständige Programmdatei).
 

@@ -5,10 +5,10 @@
   "description": "Precision desktop studio for seamless musical audio loops.",
   "author": "Aviello Studio",
   "license": "MIT",
-  "homepage": "https://github.com/NIGATAulxgenii/seamforge",
+  "homepage": "https://github.com/Aviello-Studio/seamforge",
   "repository": {
     "type": "git",
-    "url": "https://github.com/NIGATAulxgenii/seamforge.git"
+    "url": "https://github.com/Aviello-Studio/seamforge.git"
   },
   "type": "module",
   "scripts": {

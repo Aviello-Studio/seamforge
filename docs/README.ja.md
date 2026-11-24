@@ -6,8 +6,8 @@
 
 **シームレスな音楽オーディオループを作るための高精度デスクトップスタジオ** · *by **Aviello Studio***
 
-[![CI](https://github.com/NIGATAulxgenii/seamforge/actions/workflows/ci.yml/badge.svg)](https://github.com/NIGATAulxgenii/seamforge/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/badge/Release-v2.0.0-e59a3c.svg)](https://github.com/NIGATAulxgenii/seamforge/releases)
+[![CI](https://github.com/Aviello-Studio/seamforge/actions/workflows/ci.yml/badge.svg)](https://github.com/Aviello-Studio/seamforge/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/badge/Release-v2.0.0-e59a3c.svg)](https://github.com/Aviello-Studio/seamforge/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-5da3e0.svg)](../LICENSE)
 ![Platform: Windows 10/11](https://img.shields.io/badge/Platform-Windows%2010%2F11-272b33.svg)
 ![Stack: Tauri v2 + Rust](https://img.shields.io/badge/Stack-Tauri%20v2%20%2B%20Rust-191c21.svg)
@@ -108,7 +108,7 @@ flowchart LR
 
 Windows 10/11（x64）向けのポータブル実行ファイル。インストーラー・追加 DLL・外部ランタイム不要です。
 
-1. **[GitHub Releases](https://github.com/NIGATAulxgenii/seamforge/releases)** を開きます。
+1. **[GitHub Releases](https://github.com/Aviello-Studio/seamforge/releases)** を開きます。
 2. `SeamForge-portable.zip`（`2.92 MB`）をダウンロードして任意のフォルダに展開します。
 3. `SeamForge.exe`（`6.92 MB` 単体実行ファイル）を起動します。
 

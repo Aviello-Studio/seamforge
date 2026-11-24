@@ -6,8 +6,8 @@
 
 **专为无缝音乐循环打造的高精度桌面音频工作室** · *由 **Aviello Studio** 打造*
 
-[![CI](https://github.com/NIGATAulxgenii/seamforge/actions/workflows/ci.yml/badge.svg)](https://github.com/NIGATAulxgenii/seamforge/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/badge/Release-v2.0.0-e59a3c.svg)](https://github.com/NIGATAulxgenii/seamforge/releases)
+[![CI](https://github.com/Aviello-Studio/seamforge/actions/workflows/ci.yml/badge.svg)](https://github.com/Aviello-Studio/seamforge/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/badge/Release-v2.0.0-e59a3c.svg)](https://github.com/Aviello-Studio/seamforge/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-5da3e0.svg)](../LICENSE)
 ![Platform: Windows 10/11](https://img.shields.io/badge/Platform-Windows%2010%2F11-272b33.svg)
 ![Stack: Tauri v2 + Rust](https://img.shields.io/badge/Stack-Tauri%20v2%20%2B%20Rust-191c21.svg)
@@ -108,7 +108,7 @@ flowchart LR
 
 开箱即用的 Windows 10/11（x64）绿色便携版——免安装、无额外 DLL、无需外部运行时：
 
-1. 前往 **[GitHub Releases](https://github.com/NIGATAulxgenii/seamforge/releases)** 页面。
+1. 前往 **[GitHub Releases](https://github.com/Aviello-Studio/seamforge/releases)** 页面。
 2. 下载 `SeamForge-portable.zip`（`2.92 MB`）并解压至任意目录。
 3. 直接运行 `SeamForge.exe`（`6.92 MB` 单文件可执行程序）。
 
