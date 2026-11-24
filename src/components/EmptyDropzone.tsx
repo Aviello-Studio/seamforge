@@ -1,5 +1,5 @@
 import { AlertCircle, FolderOpen, Loader2, Upload } from 'lucide-react'
-import appIcon from '../assets/app-icon.png'
+import appIcon from '../assets/app-icon.svg'
 import { useI18n } from '../lib/i18n'
 
 export interface EmptyDropzoneProps {

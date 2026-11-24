@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="app-icon.png" alt="SeamForge" width="96" height="96" />
+<img src="app-icon.svg" alt="SeamForge" width="104" height="104" />
 
 # SeamForge
 
@@ -15,7 +15,7 @@
 
 [English](../README.md) · [Русский](README.ru.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · [Español](README.es.md) · **Deutsch**
 
-Offline-Multithreading-DSP in Rust · Direkte Audioextraktion aus Videos ohne FFmpeg · 7.04 MB portable Einzel-EXE
+Offline-Multithreading-DSP in Rust · Direkte Audioextraktion aus Videos ohne FFmpeg · 7.01 MB portable Einzel-EXE
 
 <br/>
 
@@ -29,7 +29,7 @@ Offline-Multithreading-DSP in Rust · Direkte Audioextraktion aus Videos ohne FF
 
 **SeamForge v2** findet automatisch musikalisch stimmige Loop-Grenzen in Audio- und Videodateien, richtet die Stereophase am Übergang präzise aus, visualisiert die Schnittstelle live im Oszilloskop und exportiert saubere WAV-Dateien in exakter Original-Abtastrate — 100 % offline, ohne externe DLLs, ohne FFmpeg-Download und mit 6 integrierten UI-Sprachen.
 
-Durch die Neuentwicklung von Electron auf **Tauri v2 + Rust** sinkt der portable Windows-Footprint von **~350 MB auf 7.04 MB** (**~50× kleiner**, `3.04 MB` als ZIP), während die zeitliche STFT-Auflösung von **46.4 ms auf 11.6 ms** vervierfacht wird (**4× feiner**).
+Durch die Neuentwicklung von Electron auf **Tauri v2 + Rust** sinkt der portable Windows-Footprint von **~350 MB auf 7.01 MB** (**~50× kleiner**, `3.01 MB` als ZIP), während die zeitliche STFT-Auflösung von **46.4 ms auf 11.6 ms** vervierfacht wird (**4× feiner**).
 
 <div align="center">
 
@@ -43,7 +43,7 @@ Durch die Neuentwicklung von Electron auf **Tauri v2 + Rust** sinkt der portable
 
 | Funktion | **SeamForge v2** | SeamForge v1 (Altversion) | PyMusicLooper | Audacity |
 | :--- | :--- | :--- | :--- | :--- |
-| **Stack & Größe** | Tauri v2 + Rust (`7.04 MB` Einzel-EXE, `3.04 MB` ZIP) | Electron + JS (`~350 MB` Ordner + opt. `5.7 GB` KI-Cache) | Python-CLI / opt. TUI (erfordert Python + NumPy/SciPy/librosa) | C++ / wxWidgets (`~120+ MB` Desktop-Installation) |
+| **Stack & Größe** | Tauri v2 + Rust (`7.01 MB` Einzel-EXE, `3.01 MB` ZIP) | Electron + JS (`~350 MB` Ordner + opt. `5.7 GB` KI-Cache) | Python-CLI / opt. TUI (erfordert Python + NumPy/SciPy/librosa) | C++ / wxWidgets (`~120+ MB` Desktop-Installation) |
 | **DSP-Analyse-Engine** | Multithreaded Rust (`rustfft` + `rayon`), `11.6 ms` Hop (`hop=512`), Ellis-DP-Beat-Tracking | Singlethreaded JS (`Meyda`), `46.4 ms` Hop (`hop=2048`) | Python-Musikanalyse für Loops & Onsets (`librosa` / SciPy) | Allgemeiner Audioeditor (manuelle Loop-Suche) |
 | **Auto-Loop-Erkennung** | Bis zu 8 bewertete Kandidaten (Harmonie, Phrase, Rhythmus, Phase) | Einfache Loop-Suche | Starke automatische musikalische Loop-Erkennung | Manuelle Auswahl (kein Beat-/Chroma-Rekurrenz-Ranking) |
 | **Naht-Oszilloskop** | Live-Überlagerung von Ende, Anfang & Überblendung + ±1/±10 ms Feintuning | Nein | Terminal-/CLI-Workflow (kein visuelles Oszilloskop) | Wellenform-Timeline (kein Live-Phasen-Overlay) |
@@ -109,8 +109,8 @@ flowchart LR
 Sofort einsatzbereiter Windows 10/11 (x64) Portable-Build — kein Installer, keine zusätzlichen DLLs, keine externe Runtime:
 
 1. Öffne **[GitHub Releases](https://github.com/NIGATAulxgenii/seamforge/releases)**.
-2. Lade `SeamForge-portable.zip` (`3.04 MB`) herunter und entpacke das Archiv.
-3. Starte `SeamForge.exe` (`7.04 MB` eigenständige Programmdatei).
+2. Lade `SeamForge-portable.zip` (`3.01 MB`) herunter und entpacke das Archiv.
+3. Starte `SeamForge.exe` (`7.01 MB` eigenständige Programmdatei).
 
 ---
 

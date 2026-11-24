@@ -1,0 +1,179 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" fill="none">
+  <defs>
+    <!-- Amber / Gold Metallic Gradients -->
+    <linearGradient id="amberHexTop" x1="110" y1="520" x2="528" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#8e541f"/>
+      <stop offset="38%" stop-color="#c98740"/>
+      <stop offset="76%" stop-color="#e7b267"/>
+      <stop offset="100%" stop-color="#f9dfa4"/>
+    </linearGradient>
+    <linearGradient id="amberHexBot" x1="112" y1="580" x2="528" y2="975" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#b97834"/>
+      <stop offset="45%" stop-color="#9e6024"/>
+      <stop offset="100%" stop-color="#6b3b12"/>
+    </linearGradient>
+    <linearGradient id="amberWave" x1="110" y1="670" x2="540" y2="195" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#91531c"/>
+      <stop offset="35%" stop-color="#c68139"/>
+      <stop offset="68%" stop-color="#e5ae63"/>
+      <stop offset="100%" stop-color="#f6d591"/>
+    </linearGradient>
+    <linearGradient id="amberEdgeLight" x1="120" y1="280" x2="528" y2="42" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#d4954c"/>
+      <stop offset="65%" stop-color="#f6d899"/>
+      <stop offset="100%" stop-color="#fff0c9"/>
+    </linearGradient>
+    <linearGradient id="amberEdgeDark" x1="140" y1="760" x2="528" y2="984" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#6a3a11"/>
+      <stop offset="100%" stop-color="#361a05"/>
+    </linearGradient>
+    <linearGradient id="amberInnerShadow" x1="180" y1="314" x2="528" y2="114" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#331906"/>
+      <stop offset="100%" stop-color="#4e290b"/>
+    </linearGradient>
+
+    <!-- Steel-Blue Metallic Gradients -->
+    <linearGradient id="blueHexTop" x1="528" y1="44" x2="778" y2="236" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#d8ecfb"/>
+      <stop offset="45%" stop-color="#9cc2e0"/>
+      <stop offset="100%" stop-color="#5d85a8"/>
+    </linearGradient>
+    <linearGradient id="blueHexBot" x1="528" y1="960" x2="944" y2="300" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#305070"/>
+      <stop offset="42%" stop-color="#4f789d"/>
+      <stop offset="78%" stop-color="#7fa8cb"/>
+      <stop offset="100%" stop-color="#b5d6ef"/>
+    </linearGradient>
+    <linearGradient id="bluePrism" x1="528" y1="288" x2="624" y2="560" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#bad8f0"/>
+      <stop offset="50%" stop-color="#6b93b5"/>
+      <stop offset="100%" stop-color="#3c5e80"/>
+    </linearGradient>
+    <linearGradient id="blueBlade" x1="470" y1="870" x2="940" y2="185" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#213c57"/>
+      <stop offset="32%" stop-color="#3c6285"/>
+      <stop offset="66%" stop-color="#6d98bc"/>
+      <stop offset="88%" stop-color="#9dc3e2"/>
+      <stop offset="100%" stop-color="#c9e3f7"/>
+    </linearGradient>
+    <linearGradient id="blueLeftArm" x1="408" y1="468" x2="556" y2="878" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#9cc2e0"/>
+      <stop offset="45%" stop-color="#4e7497"/>
+      <stop offset="100%" stop-color="#213c57"/>
+    </linearGradient>
+    <linearGradient id="blueGrooveDark" x1="556" y1="870" x2="928" y2="230" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0f1e30"/>
+      <stop offset="55%" stop-color="#172c44"/>
+      <stop offset="100%" stop-color="#112236"/>
+    </linearGradient>
+    <linearGradient id="blueGrooveLight" x1="560" y1="860" x2="945" y2="210" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#6e98bc"/>
+      <stop offset="50%" stop-color="#a5cae6"/>
+      <stop offset="100%" stop-color="#e3f3ff"/>
+    </linearGradient>
+    <clipPath id="bladeClip">
+      <path d="M554 892 L548 694 C615 568 686 432 762 288 C802 212 850 180 975 180 C902 276 802 456 694 654 C644 746 596 828 554 892 Z"/>
+    </clipPath>
+  </defs>
+
+  <!-- 1. UPPER-LEFT AMBER HEXAGON FRAME -->
+  <g id="hex-amber-top">
+    <path d="M528 39 L134 266 C118 275 112 290 112 308 L112 524 L179 512 L179 314 L528 114 Z" fill="url(#amberHexTop)"/>
+    <path d="M528 39 L134 266 C118 275 112 290 112 308 L112 524 L125 521 L125 312 C125 297 130 286 143 278 L528 56 Z" fill="url(#amberEdgeLight)" opacity="0.88"/>
+    <path d="M528 114 L179 314 L179 512 L166 514 L166 306 L528 97 Z" fill="url(#amberInnerShadow)"/>
+  </g>
+
+  <!-- 2. LOWER-LEFT AMBER HEXAGON FRAME -->
+  <g id="hex-amber-bottom">
+    <path d="M112 572 L179 581 L179 711 L528 909 L528 984 L134 758 C118 749 112 734 112 716 Z" fill="url(#amberHexBot)"/>
+    <path d="M179 581 L179 711 L528 909 L528 925 L165 720 L165 579 Z" fill="#f2ca82" opacity="0.72"/>
+    <path d="M112 572 L125 574 L125 712 C125 726 131 738 143 745 L528 967 L528 984 L134 758 C118 749 112 734 112 716 Z" fill="url(#amberEdgeDark)"/>
+  </g>
+
+  <!-- 3. UPPER-RIGHT STEEL-BLUE HEXAGON ARM -->
+  <g id="hex-blue-top">
+    <path d="M528 39 L780 185 L746 245 L528 114 Z" fill="url(#blueHexTop)"/>
+    <path d="M528 39 L780 185 L772 198 L528 56 Z" fill="#e5f4ff" opacity="0.84"/>
+    <path d="M528 114 L746 245 L754 230 L528 97 Z" fill="#17283b"/>
+    <path d="M780 185 L746 245 L736 238 L768 182 Z" fill="#2a4562"/>
+  </g>
+
+  <!-- 4. LOWER-RIGHT STEEL-BLUE HEXAGON ARM -->
+  <g id="hex-blue-bottom">
+    <path d="M944 286 L944 716 C944 734 938 749 922 758 L528 984 L528 909 L880 710 L880 396 Z" fill="url(#blueHexBot)"/>
+    <path d="M944 286 L880 396 L880 710 L528 909 L528 924 L894 718 L894 402 L944 316 Z" fill="#c7e2f7" opacity="0.68"/>
+    <path d="M944 286 L932 308 L932 714 C932 728 926 739 914 746 L528 967 L528 984 L922 758 C938 749 944 734 944 716 Z" fill="#182b40"/>
+  </g>
+
+  <!-- 5. INNER STEEL-BLUE PRISM WING -->
+  <g id="inner-blue-prism">
+    <path d="M526 284 L629 476 L575 576 L526 492 Z" fill="url(#bluePrism)"/>
+    <path d="M528 286 L629 476 L615 478 L528 314 Z" fill="#cce5f8" opacity="0.74"/>
+    <path d="M629 476 L575 576 L566 560 L614 474 Z" fill="#1b3048"/>
+  </g>
+
+  <!-- 6. CENTER-LEFT AMBER WAVEFORM -->
+  <g id="amber-waveform">
+    <path d="M49 551 L216 520 L260 412 L299 508 L474 183 L528 286 L528 492 L592 608 L549 686 L426 452 L309 688 L257 540 L236 577 Z" fill="url(#amberWave)"/>
+    <path d="M49 551 L216 520 L260 412 L263 442 L223 531 L108 551 Z" fill="#f8d896" opacity="0.82"/>
+    <path d="M299 508 L474 183 L476 218 L307 526 L260 432 L260 412 Z" fill="#fae1aa" opacity="0.84"/>
+    <path d="M474 183 L528 286 L528 304 L472 204 Z" fill="#9c6022" opacity="0.58"/>
+    <path d="M49 551 L236 577 L257 540 L309 688 L398 509 L392 536 L307 704 L256 560 L234 590 Z" fill="#3a1c06" opacity="0.9"/>
+    <path d="M426 452 L549 686 L592 608 L581 605 L548 666 L432 446 Z" fill="#63360e" opacity="0.82"/>
+    <!-- Center machined seam hairlines -->
+    <line x1="528" y1="39" x2="528" y2="114" stroke="#22170d" stroke-width="2.5" opacity="0.6"/>
+    <line x1="528" y1="909" x2="528" y2="984" stroke="#22170d" stroke-width="2.5" opacity="0.6"/>
+    <line x1="528" y1="286" x2="528" y2="492" stroke="#1e2d3d" stroke-width="2" opacity="0.38"/>
+  </g>
+
+  <!-- 7. SWEEPING GROOVED STEEL-BLUE V-BLADE -->
+  <g id="blue-v-blade">
+    <!-- Left upward V-arm (tucked 3px cleanly under right sweeping blade) -->
+    <path d="M394 515 L426 452 L552 694 L556 892 L552 892 Z" fill="url(#blueLeftArm)"/>
+    <path d="M426 452 L549 694 L541 710 L418 468 Z" fill="#c7e2f7" opacity="0.84"/>
+    <path d="M394 515 L407 506 L554 868 L554 892 Z" fill="#15263a"/>
+
+    <!-- Right sweeping sculpted feather-blade -->
+    <path d="M554 892 L548 694 C615 568 686 432 762 288 C802 212 850 180 975 180 C902 276 802 456 694 654 C644 746 596 828 554 892 Z" fill="url(#blueBlade)"/>
+
+    <!-- Carved curved feather grooves -->
+    <g clip-path="url(#bladeClip)">
+      <path d="M554 892 C588 730 676 520 792 356 C848 276 908 228 968 202 L982 225 L675 730 L554 892 Z" fill="#1c3550" opacity="0.58"/>
+      <g fill="none" stroke-linecap="round">
+        <path d="M744 434 C794 342 852 270 936 226" stroke="url(#blueGrooveDark)" stroke-width="8"/>
+        <path d="M746 438 C796 346 854 274 938 230" stroke="url(#blueGrooveLight)" stroke-width="3.2"/>
+
+        <path d="M718 486 C776 382 840 302 924 252" stroke="url(#blueGrooveDark)" stroke-width="7.5"/>
+        <path d="M720 490 C778 386 842 306 926 256" stroke="url(#blueGrooveLight)" stroke-width="3"/>
+
+        <path d="M694 534 C758 424 824 340 908 286" stroke="url(#blueGrooveDark)" stroke-width="7"/>
+        <path d="M696 538 C760 428 826 344 910 290" stroke="url(#blueGrooveLight)" stroke-width="2.8"/>
+
+        <path d="M668 584 C736 472 806 388 890 330" stroke="url(#blueGrooveDark)" stroke-width="7"/>
+        <path d="M670 588 C738 476 808 392 892 334" stroke="url(#blueGrooveLight)" stroke-width="2.8"/>
+
+        <path d="M626 672 C682 562 752 478 852 414" stroke="url(#blueGrooveDark)" stroke-width="9"/>
+        <path d="M629 676 C685 566 755 482 855 418" stroke="url(#blueGrooveLight)" stroke-width="3.6"/>
+
+        <path d="M604 718 C658 614 726 532 820 470" stroke="url(#blueGrooveDark)" stroke-width="8.5"/>
+        <path d="M607 722 C661 618 729 536 823 474" stroke="url(#blueGrooveLight)" stroke-width="3.2"/>
+
+        <path d="M586 764 C638 666 704 588 790 530" stroke="url(#blueGrooveDark)" stroke-width="8"/>
+        <path d="M589 768 C641 670 707 592 793 534" stroke="url(#blueGrooveLight)" stroke-width="3"/>
+
+        <path d="M566 820 C606 728 666 654 748 598" stroke="url(#blueGrooveDark)" stroke-width="8.5"/>
+        <path d="M569 824 C609 732 669 658 751 602" stroke="url(#blueGrooveLight)" stroke-width="3.2"/>
+
+        <path d="M558 858 C592 778 644 714 714 664" stroke="url(#blueGrooveDark)" stroke-width="7.5"/>
+        <path d="M561 862 C595 782 647 718 717 668" stroke="url(#blueGrooveLight)" stroke-width="2.8"/>
+
+        <path d="M554 880 C580 820 622 768 678 726" stroke="url(#blueGrooveDark)" stroke-width="6.5"/>
+        <path d="M557 883 C583 823 625 771 681 729" stroke="url(#blueGrooveLight)" stroke-width="2.4"/>
+      </g>
+    </g>
+
+    <!-- Crisp outer highlight rim & dark lower-right edge -->
+    <path d="M548 694 C615 568 686 432 762 288 C802 212 850 180 975 180" stroke="#e4f3ff" stroke-width="5" stroke-linecap="round" opacity="0.88"/>
+    <path d="M975 180 C902 276 802 456 694 654 C644 746 596 828 554 892" stroke="#122236" stroke-width="6" stroke-linecap="round" opacity="0.85"/>
+  </g>
+</svg>

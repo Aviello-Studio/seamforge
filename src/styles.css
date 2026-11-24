@@ -329,9 +329,8 @@ select:focus-visible {
 
 .titlebar-emblem {
   display: block;
-  width: 20px;
-  height: 20px;
-  border-radius: 5px;
+  width: 21px;
+  height: 21px;
   flex-shrink: 0;
   pointer-events: none;
 }
@@ -589,10 +588,9 @@ select:focus-visible {
 
 .empty-brand-icon {
   display: block;
-  width: 56px;
-  height: 56px;
-  border-radius: 13px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  width: 60px;
+  height: 60px;
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.5));
 }
 
 .empty-title {

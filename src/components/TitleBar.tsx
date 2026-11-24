@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Copy, FolderOpen, Globe, Minus, Square, Trash2, X } from 'lucide-react'
-import appIcon from '../assets/app-icon.png'
+import appIcon from '../assets/app-icon.svg'
 import {
   closeWindow,
   isWindowMaximized,

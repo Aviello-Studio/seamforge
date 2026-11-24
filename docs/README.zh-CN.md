@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="app-icon.png" alt="SeamForge" width="96" height="96" />
+<img src="app-icon.svg" alt="SeamForge" width="104" height="104" />
 
 # SeamForge
 
@@ -15,7 +15,7 @@
 
 [English](../README.md) · [Русский](README.ru.md) · **简体中文** · [日本語](README.ja.md) · [Español](README.es.md) · [Deutsch](README.de.md)
 
-离线多线程 Rust DSP · 无需 FFmpeg 直接提取视频音轨 · 7.04 MB 单文件便携版 EXE
+离线多线程 Rust DSP · 无需 FFmpeg 直接提取视频音轨 · 7.01 MB 单文件便携版 EXE
 
 <br/>
 
@@ -29,7 +29,7 @@
 
 **SeamForge v2** 能够自动在音频与视频文件中定位音乐结构契合的循环切点，在接缝处自动对齐立体声相位，提供实时接缝示波器叠加视图，并以原始采样率无损导出干净的 WAV 文件——完全离线运行，零外部 DLL 依赖，无需下载 FFmpeg，内置 6 种界面语言。
 
-从 Electron 全面重构为 **Tauri v2 + Rust** 后，v2 将 Windows 便携版体积从 **~350 MB 缩减至 7.04 MB**（**缩小约 50 倍**，ZIP 压缩包仅 `3.04 MB`），同时将 STFT 时间分辨率从 **46.4 ms 提升至 11.6 ms**（**精细度提升 4 倍**）。
+从 Electron 全面重构为 **Tauri v2 + Rust** 后，v2 将 Windows 便携版体积从 **~350 MB 缩减至 7.01 MB**（**缩小约 50 倍**，ZIP 压缩包仅 `3.01 MB`），同时将 STFT 时间分辨率从 **46.4 ms 提升至 11.6 ms**（**精细度提升 4 倍**）。
 
 <div align="center">
 
@@ -43,7 +43,7 @@
 
 | 特性 | **SeamForge v2** | SeamForge v1（旧版） | PyMusicLooper | Audacity |
 | :--- | :--- | :--- | :--- | :--- |
-| **技术栈与体积** | Tauri v2 + Rust（`7.04 MB` 单文件 EXE，`3.04 MB` ZIP） | Electron + JS（`~350 MB` 目录 + 可选 `5.7 GB` AI 缓存） | Python CLI / 可选 TUI（需 Python + NumPy/SciPy/librosa） | C++ / wxWidgets（`~120+ MB` 桌面安装包） |
+| **技术栈与体积** | Tauri v2 + Rust（`7.01 MB` 单文件 EXE，`3.01 MB` ZIP） | Electron + JS（`~350 MB` 目录 + 可选 `5.7 GB` AI 缓存） | Python CLI / 可选 TUI（需 Python + NumPy/SciPy/librosa） | C++ / wxWidgets（`~120+ MB` 桌面安装包） |
 | **DSP 分析引擎** | 多线程 Rust（`rustfft` + `rayon`），`11.6 ms` 步长（`hop=512`），Ellis DP 节拍跟踪 | 单线程 JS（`Meyda`），`46.4 ms` 步长（`hop=2048`） | Python 音乐循环与起音分析（`librosa` / SciPy） | 通用音频编辑（需手动寻找循环点） |
 | **自动音乐循环查找** | 最多 8 个综合评分候选（和声、乐句、节奏、相位） | 基础循环查找 | 强大的自动音乐循环查找能力 | 手动选区（无节拍/色度自相似矩阵排名） |
 | **可视化接缝示波器** | 实时显示尾部/头部/淡入淡出叠加波形 + ±1/±10 ms 微调 | 无 | 终端命令行工作流（无示波器接缝编辑器） | 波形时间轴（无实时接缝相位叠加） |
@@ -109,8 +109,8 @@ flowchart LR
 开箱即用的 Windows 10/11（x64）绿色便携版——免安装、无额外 DLL、无需外部运行时：
 
 1. 前往 **[GitHub Releases](https://github.com/NIGATAulxgenii/seamforge/releases)** 页面。
-2. 下载 `SeamForge-portable.zip`（`3.04 MB`）并解压至任意目录。
-3. 直接运行 `SeamForge.exe`（`7.04 MB` 单文件可执行程序）。
+2. 下载 `SeamForge-portable.zip`（`3.01 MB`）并解压至任意目录。
+3. 直接运行 `SeamForge.exe`（`7.01 MB` 单文件可执行程序）。
 
 ---
 
